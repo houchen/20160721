@@ -6,7 +6,7 @@ $ipData = new IPSequence();
 $ipData->set(json_decode($_POST['data']));
 $queryClient = new IPQuery();
 try {
-    $queryClient->addIPSequence($ipData);
+    $queryClient->addIPRank($ipData);
 } catch (Exception $e) {
     echo json_encode(array('status' => 'error'));
 }

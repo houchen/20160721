@@ -10,12 +10,14 @@ require_once('services/IPQuery.php');
 require_once('model/IPSequence.php');
 $queryPara = json_decode($_POST['data']);
 //查询方法
-$queryMethod=$_GET['method'];
-echo $queryMethod;
+$queryMethod='queryIPRankByName';
+if(isset($_GET['method'])){
+    $queryMethod=$_GET['method'];
+}
 $querClient = new IPQuery();
-$ipCount = $querClient->queryIPRankByName($queryPara->name, $queryPara->range->start, $queryPara->range->stop, $queryPara->withScores);
+$IPRank = $querClient->queryIPRankByName($queryPara->name, $queryPara->range->start, $queryPara->range->stop, $queryPara->withScores);
 $res = new IPSequence();
 $res->name = $queryPara->name;
 $res->createTime = null;
-$res->Rank = $ipCount;
+$res->Rank = $IPRank;
 echo json_encode($res);

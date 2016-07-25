@@ -8,7 +8,7 @@
         var ipdata = {
             "name": "foo_name",
             "createTime": '',
-            "ipCount": {
+            "Rank": {
                 "192.168.1.1": 12,
                 "172.15.1.125": 56,
                 '172.16.123.18': 10000,
@@ -23,7 +23,7 @@
                 dataType: "json",
                 data: {data: JSON.stringify(ipdata)},
                 success: function (data) {
-                    document.write('success');
+                    $('#result').append('<br>status:'+data['status']+'</<br>');
                 },
                 error: function () {
                     document.write('failed!');
@@ -44,7 +44,7 @@
 
         function querybyname() {
             $.ajax({
-                url: 'query.php',
+                url: 'query.php?method=queryIPRankByName',
                 type: 'post',
                 dataType: 'json',
                 data: {data: JSON.stringify(query_param)},
@@ -53,13 +53,29 @@
                             '<br>create time:' + data['createTime'] ;
 //                    document.write(html);
                     $('ol').append('<li>' + html + '</li>');
-                    var ipCount = data['ipCount'];
+                    var ipCount = data['Rank'];
                     for (var ip in ipCount) {
                         $('ol').append('<li>ip:' + ip + ' rank:' + ipCount[ip] + '</li>');
                     }
                 },
                 error: function (data) {
                     document.write('query failed!');
+                }
+            })
+        }
+        var del_param={
+            name:'foo_name'
+        };
+
+        function deletebyname(){
+            $.ajax({
+                url:'delete.php',
+                type:'post',
+                dataType:'json',
+                data:{data:JSON.stringify(del_param)},
+                success:function(data){
+                    var html='<br>name: '+data['name']+' deleted count: '+data['count']+'</<br>';
+                    $('#result').append(html);
                 }
             })
         }
@@ -71,7 +87,9 @@ hello
 <button onclick="addip()" value="">try_add</button>
 <br>
 <button onclick="querybyname()">try_query</button>
-<div id="ip_list">
+<br>
+<button onclick="deletebyname()">try_delete</button>
+<div id="result">
     <ol>
         <li>ip list</li>
     </ol>
