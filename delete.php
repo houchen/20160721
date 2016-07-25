@@ -9,6 +9,6 @@
 require_once ('services/IPQuery.php');
 $delPara=json_decode($_POST['data']);
 $client=new IPQuery();
-$count=$client->deleteIPByName($delPara->name);
+$count=$client->deleteRankByName($delPara->name);
 $ret=array('name'=>$delPara->name,'count'=>$count);
 echo json_encode($ret);

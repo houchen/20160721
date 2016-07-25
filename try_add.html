@@ -9,21 +9,21 @@
             "name": "foo_name",
             "createTime": '',
             "Rank": {
-                "192.168.1.1": 12,
-                "172.15.1.125": 56,
-                '172.16.123.18': 10000,
-                '114.114.114.114': 4
+                "A192.168.1.1": 12,
+                "B172.15.1.125": 56,
+                'C172.16.123.18': 10000,
+                'D114.114.114.114': 4
             }
         };
-        ipdata['createTime']=Date.now();
         function addip() {
+            ipdata['createTime'] = Date.now();
             $.ajax({
                 url: "add.php",
                 type: "post",
                 dataType: "json",
                 data: {data: JSON.stringify(ipdata)},
                 success: function (data) {
-                    $('#result').append('<br>status:'+data['status']+'</<br>');
+                    $('#result').append('<br>status:' + data['status'] + '</<br>');
                 },
                 error: function () {
                     document.write('failed!');
@@ -44,13 +44,13 @@
 
         function querybyname() {
             $.ajax({
-                url: 'query.php?method=queryIPRankByName',
+                url: 'methodSwitch.php?method=queryIPRankByName',
                 type: 'post',
                 dataType: 'json',
                 data: {data: JSON.stringify(query_param)},
                 success: function (data) {
                     var html = 'name:' + data['name'] +
-                            '<br>create time:' + data['createTime'] ;
+                            '<br>create time:' + data['createTime'];
 //                    document.write(html);
                     $('ol').append('<li>' + html + '</li>');
                     var ipCount = data['Rank'];
@@ -63,35 +63,72 @@
                 }
             })
         }
-        var del_param={
-            name:'foo_name'
+
+        var query_param_by_timeinterval = {
+            'name': 'foo_name',
+            'range': {
+                start: 12312,
+                stop: 1232333
+            },
+            withScores: true
         };
 
-        function deletebyname(){
+        function querybytimeinterval() {
+            query_param_by_timeinterval['range']['stop'] = Date.now();
+            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
             $.ajax({
-                url:'delete.php',
-                type:'post',
-                dataType:'json',
-                data:{data:JSON.stringify(del_param)},
-                success:function(data){
-                    var html='<br>name: '+data['name']+' deleted count: '+data['count']+'</<br>';
+                url: 'methodSwitch.php?method=queryIPRankByTimeInterval',
+                type: 'post',
+                dataType: 'json',
+                data: {data: JSON.stringify(query_param_by_timeinterval)},
+                success: function (data) {
+                    var html = 'name: ' + data['name'] + '<br>create time: ' + data['createTime'];
+                    $('ol').append('<li>' + html + '</li>');
+                    var ipRank = data['Rank'];
+                    for (var ip in ipRank) {
+                        $('ol').append('<li>ip: ' + ip + ' rank: ' + ipRank[ip] + '</li>');
+                    }
+                },
+                error: function (data) {
+                    document.write('query failed!');
+                }
+            })
+        }
+        var del_param = {
+            name: 'foo_name'
+        };
+
+
+        function deletebyname() {
+            $.ajax({
+                url: 'delete.php',
+                type: 'post',
+                dataType: 'json',
+                data: {data: JSON.stringify(del_param)},
+                success: function (data) {
+                    var html = '<br>name: ' + data['name'] + ' deleted count: ' + data['count'] + '</<br>';
                     $('#result').append(html);
                 }
             })
         }
+        function clearresult(){
+            var resdiv=$('#result').empty();
+            resdiv.append('<ol></ol>')
+        }
     </script>
 </head>
 <body>
-hello
+<button onclick="clearresult()">clear result</button>
 <br>
 <button onclick="addip()" value="">try_add</button>
 <br>
-<button onclick="querybyname()">try_query</button>
+<button onclick="querybyname()">try_query_by_name</button>
+<br>
+<button onclick="querybytimeinterval()">try_query_by_time_interval</button>
 <br>
 <button onclick="deletebyname()">try_delete</button>
 <div id="result">
     <ol>
-        <li>ip list</li>
     </ol>
 </div>
 </body>
