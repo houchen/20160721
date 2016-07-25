@@ -29,6 +29,7 @@ define('logCounter','LOG_COUNTER');
 class IPQuery
 {
     private $redisConn = null;
+    //已经去掉这个变量了，返回的时候自己创建合适的变量
     private $result = null;
 
     public function __construct()
@@ -83,6 +84,13 @@ class IPQuery
         $this->redisConn->select(IPRankDB);
         $this->result = $this->redisConn->zRevRange($ipName, $start, $stop, $withScores);
         return $this->result;
+    }
+    //通过createTime拿到对应的logID
+    public function querylogIDByTimeInterval($nameID,$startTime,$endTime){
+        $this->redisConn->select(TimeDB);
+        //查询nameID时间段范围内的所有logID
+        $res = $this->redisConn->zRangeByScore($nameID,$startTime,$endTime);
+       return $res;
     }
 
     public function queryIPByTimestamp()
