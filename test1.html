@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>数据展示</title>
+    <script type="text/javascript" src="http://cdn.hcharts.cn/jquery/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="http://cdn.hcharts.cn/highcharts/highcharts.js"></script>
+    <script type="text/javascript" src="http://cdn.hcharts.cn/highcharts/modules/exporting.js"></script>
+    <style type="text/css">
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+        tr, td {
+            padding: 0;
+        }
+
+        table {
+            width: 600px;
+            border-top: 1px solid black;
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            margin: 0 auto;
+        }
+
+        table tr {
+            border-bottom: 1px solid black;
+            border-top: 1px solid black;
+            height: 35px;
+        }
+
+        .td1 {
+            text-align: center;
+            width: 40%;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+        }
+
+        .td2 {
+            text-align: center;
+            width: 20%;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+        }
+
+        .td3 {
+            text-align: center;
+            border-bottom: 1px solid black;
+            width: 40%;
+        }
+
+        .show {
+            padding: 30px 0;
+            width: 240px;
+            margin: 0 auto;
+            font-size: 24px;
+        }
+
+        .tr {
+            background: grey;
+        }
+    </style>
+
+</head>
+<body>
+<!--以列表的形式显示值-->
+<div class="show">当前IP Rank top 15</div>
+<table id="table">
+    <thead>
+    <tr class="tr">
+        <td class="td1">createTime</td>
+        <td class="td2">Rank</td>
+        <td class="td3">IP</td>
+    </tr>
+    </thead>
+    <tbody id="tbody">
+    </tbody>
+</table>
+<hr style="margin-top:50px;">
+<div id="container" style="min-width:700px;height:400px"></div>
+<script>
+    //向数据库中添加数据
+    var ipdata = {
+        "name": "foo_name",
+        "createTime": '',
+        "Rank": {
+            "A192.168.1.1": 12,
+            "B172.15.1.125": 56,
+            'C172.16.123.18': 10000,
+            'D114.114.114.114': 4
+        }
+    };
+    function addip() {
+        ipdata['createTime'] = Date.now();
+        $.ajax({
+            url: "add.php",
+            type: "post",
+            dataType: "json",
+            data: {data: JSON.stringify(ipdata)},
+            success: function (data) {
+                //$('#result').append('<br>status:' + data['status'] + '</<br>');
+                console.log("the add is successfully");
+            },
+            error: function () {
+                document.write('failed!');
+            }
+        })
+    }
+    //调用添加数据的方法；
+    addip();
+    var query_param = {
+        'name': 'bbs.drawing.com',
+        //指定范围,这里查询全部范围
+        'range': {
+            'start': 0,
+            'stop':100
+        },
+        //带不带分数的查询
+        withScores: true
+    };
+    var i = 0;
+    function querybyname() {
+        console.log(i++);
+        var reJson;
+        $.ajax({
+            url: 'methodSwitch.php?method=queryIPRankByName',
+            type: 'post',
+            dataType: 'json',
+            async: false,
+            cache: false,
+            data: {data: JSON.stringify(query_param)},
+            success: function (data) {
+                reJson = data;
+            },
+            error: function (data) {
+                document.write('query failed!');
+            }
+        });
+        return reJson;
+    }
+    // //查询数据
+    // function getJson(){
+    //   var reJson;
+    //   $.ajax({
+    //     type:"POST",
+    //     url:"test1.php",
+    //     async:false,
+    //     cache:false,
+    //     data:{
+    //       "name":"log_IP",
+    //       "createTime":"123",
+    //       "value":{
+    //         "127.0.0.0":3,
+    //         "127.0.0.1":6,
+    //         "127.0.0.2":3,
+    //         "127.0.0.1":8,
+    //         "127.0.0.4":9
+    //       },
+    //       "range":"1-10"
+    //     },
+    //     success:function(result){
+    //       reJson = result;
+    //     },
+    //     error:function(data){
+    //       console.log("failing!")
+    //     }
+    //   });
+    //   return reJson;
+    // }
+    //从后台返回到前台的数据为：
+    var data = {
+        "name": "log_IP",
+        "createTime": "123",
+        "value": {
+            "127.0.0.0": 28,
+            "127.0.0.1": 10,
+            "127.0.0.2": 8,
+            "127.0.0.9": 7,
+            "127.0.0.4": 3
+        },
+        "range": "1-10"
+    }
+    //用于模拟每个一段时间更新数据，暂定为5s.
+    //    function getValue() {
+    //        var data = {
+    //            "name": "www.kgx.org",
+    //            "createTime": "1468827524",
+    //            "value": {
+    //                "192.168.10.96": 3113,
+    //                "192.168.10.69": 4221,
+    //                "192.168.10.201": 2711,
+    //                "192.168.10.3": 3324,
+    //                "192.168.10.248": 736,
+    //                "192.168.10.185": 933,
+    //                "192.168.10.1": 3464,
+    //                "192.168.10.151": 1604,
+    //                "192.168.10.17": 752,
+    //                "192.168.10.7": 3267
+    //            },
+    ////            "range":"1-10"
+    //        }
+    //        return data;
+    //    }
+    //每隔5s刷新一次数据
+    function showData() {
+        var eval_res = eval('querybyname()');
+        var strTime =  eval_res.createTime;
+        var strValue = eval_res.Rank;
+        var strName = eval_res.name;
+        var aIp = new Array();
+        var aCount = new Array();
+        for (var item in strValue) {
+            aIp.push(item);
+            aCount.push(strValue[item]);
+        }
+        //创建列表
+        if ($("#tbody").html()) {
+            $("#tbody").html("");
+            for (var i = 0; i < aIp.length; i++) {
+                var tr = $("<tr></tr>");
+                var tdName = $("<td></td>");
+                tdName.addClass("td1");
+                tdName.html(strTime);
+
+                var tdCount = $("<td></td>");
+                tdCount.addClass("td2");
+                tdCount.html(aCount[i]);
+
+                var tdAddress = $("<td></td>");
+                tdAddress.addClass("td3");
+                tdAddress.html(aIp[i]);
+
+                tr.append(tdName);
+                tr.append(tdCount);
+                tr.append(tdAddress);
+                $("#tbody").append(tr);
+            }
+        } else {
+            for (var i = 0; i < aIp.length; i++) {
+                var tr = $("<tr></tr>");
+                var tdName = $("<td></td>");
+                tdName.addClass("td1");
+                tdName.html(strTime);
+
+                var tdCount = $("<td></td>");
+                tdCount.addClass("td2");
+                tdCount.html(aCount[i]);
+
+                var tdAddress = $("<td></td>");
+                tdAddress.addClass("td3");
+                tdAddress.html(aIp[i]);
+
+                tr.append(tdName);
+                tr.append(tdCount);
+                tr.append(tdAddress);
+                $("#tbody").append(tr);
+            }
+        }
+
+        //运用折线图展示的js
+        $(function () {
+            $('#container').highcharts({
+                chart: {
+                    type: 'line'
+                },
+                title: {
+                    text: '当前IP Rank总计'
+                },
+                subtitle: {
+                    text: "时间：" + strTime
+                },
+                xAxis: {
+                    categories: aIp
+                },
+                yAxis: {
+                    title: {
+                        text: 'Rank'
+                    }
+                },
+                plotOptions: {
+                    line: {
+                        dataLabels: {
+                            enabled: true
+                        },
+                        enableMouseTracking: false
+                    }
+                },
+                series: [{
+                    name: strName,
+                    data: aCount
+                }]
+            });
+        });
+    }
+    //每隔5s显示一次数据。
+    $(function () {
+        showData();
+        setInterval("showData()", 5000);
+    });
+    // //var str = "127.0.0.9&9&112;127.0.0.2&2&223;127.0.0.3&3&223;127.0.0.4&9&223;127.0.0.5&5&223;"
+    // //setInterval(getJson(),5000);
+    // var str = getJson().substring(1);
+    // var valueArr = str.split(";");
+    // valueArr.pop();
+    // for(var i = 0; i < valueArr.length; i++){
+    //   var tem = valueArr[i].split("&");
+    //   if(ra[tem[1]] == null){
+    //     ra[tem[1]] = tem[0] + "&" + tem[2];
+    //   }
+    //   else{
+    //     ra[tem[1]] = ra[tem[1]] + ";" + tem[0] + "&" + tem[2];
+    //   }
+    // }
+</script>
+</body>
+</html>

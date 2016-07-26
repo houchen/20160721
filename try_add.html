@@ -3,6 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>try json</title>
+    <style type="text/css">
+        #hostlist {
+            display: inline-block;
+            float: left;
+            width: 300px;
+            height: 900px;
+            border: 1px solid red;
+            margin-left: 10px;
+            padding: 10px;
+        }
+    </style>
     <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
     <script type="application/javascript">
         var ipdata = {
@@ -16,7 +27,10 @@
             }
         };
         function addip() {
-            ipdata['createTime'] = Date.now();
+            ipdata['createTime'] = Date.now() / 1000;
+            ipdata['name'] = $('#name').val();
+//            ipdata.range.start = $('start').val();
+//            ipdata.range.stop = $('stop').val();
             $.ajax({
                 url: "add.php",
                 type: "post",
@@ -25,8 +39,8 @@
                 success: function (data) {
                     $('#result').append('<br>status:' + data['status'] + '</<br>');
                 },
-                error: function () {
-                    document.write('failed!');
+                error: function (data) {
+                    $('#result').append('<br>status:' + data['status'] + '</<br>');
                 }
             })
         }
@@ -43,6 +57,9 @@
         };
 
         function querybyname() {
+            query_param['name'] = $('#name').val();
+            query_param.range.start = $('#start').val();
+            query_param.range.stop = $('#stop').val();
             $.ajax({
                 url: 'methodSwitch.php?method=queryIPRankByName',
                 type: 'post',
@@ -52,7 +69,7 @@
                     var html = 'name:' + data['name'] +
                             '<br>create time:' + data['createTime'];
 //                    document.write(html);
-                    $('ol').append('<li>' + html + '</li>');
+                    $('#result').find('ol').append('<li>' + html + '</li>');
                     var ipCount = data['Rank'];
                     for (var ip in ipCount) {
                         $('ol').append('<li>ip:' + ip + ' rank:' + ipCount[ip] + '</li>');
@@ -74,8 +91,11 @@
         };
 
         function querybytimeinterval() {
-            query_param_by_timeinterval['range']['stop'] = Date.now();
-            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
+//            query_param_by_timeinterval['range']['stop'] = Date.now();
+//            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
+            query_param_by_timeinterval['name'] = $('#name').val();
+            query_param_by_timeinterval['range'].start = $('#start').val();
+            query_param_by_timeinterval['range'].stop = $('#stop').val();
             $.ajax({
                 url: 'methodSwitch.php?method=queryIPRankByTimeInterval',
                 type: 'post',
@@ -83,10 +103,10 @@
                 data: {data: JSON.stringify(query_param_by_timeinterval)},
                 success: function (data) {
                     var html = 'name: ' + data['name'] + '<br>create time: ' + data['createTime'];
-                    $('ol').append('<li>' + html + '</li>');
+                    $('#result').find('ol').append('<li>' + html + '</li>');
                     var ipRank = data['Rank'];
                     for (var ip in ipRank) {
-                        $('ol').append('<li>ip: ' + ip + ' rank: ' + ipRank[ip] + '</li>');
+                        $('#result').find('ol').append('<li>ip: ' + ip + ' rank: ' + ipRank[ip] + '</li>');
                     }
                 },
                 error: function (data) {
@@ -100,6 +120,7 @@
 
 
         function deletebyname() {
+            del_param['name'] = $('#name').val();
             $.ajax({
                 url: 'delete.php',
                 type: 'post',
@@ -111,25 +132,77 @@
                 }
             })
         }
-        function clearresult(){
-            var resdiv=$('#result').empty();
+        function clearresult() {
+            var resdiv = $('#result').empty();
             resdiv.append('<ol></ol>')
+        }
+        function getnamelist() {
+            $('#hostlist').find('ol').empty();
+            var query_name_para = {
+                name: '',
+                count: ''
+            };
+            query_name_para.name = $('#namePattern').val();
+            query_name_para.count = $('#queryCount').val();
+            $.ajax({
+                url: 'methodSwitch.php?method=getNameList',
+                type: 'post',
+                dateType: 'json',
+                data: {data: JSON.stringify(query_name_para)},
+                success: function (data) {
+                    for (var name in data) {
+//                        timerange = queryTimeRangeByName(name);
+//                        $('#hostlist').find('ol').append('<li>' + name + ' ' + timerange['start']+ ' ' + timerange['stop'] + '</li>');
+                        $('#hostlist').find('ol').append('<li>' + name + '</li>');
+                    }
+                },
+                error: function (data) {
+                    $('#hostlist').find('ol').append('<br>query name error</br>');
+                }
+            })
+        }
+
+        function queryTimeRangeByName(name) {
+            $.ajax({
+                url: 'methodSwitch.php?method=queryTimeRange&name=' + name,
+                type: 'post',
+                data: {data: ''},
+                success: function (data) {
+                    return data
+                },
+                error: function (data) {
+                    return false;
+                }
+            })
         }
     </script>
 </head>
 <body>
-<button onclick="clearresult()">clear result</button>
-<br>
-<button onclick="addip()" value="">try_add</button>
-<br>
-<button onclick="querybyname()">try_query_by_name</button>
-<br>
-<button onclick="querybytimeinterval()">try_query_by_time_interval</button>
-<br>
-<button onclick="deletebyname()">try_delete</button>
-<div id="result">
-    <ol>
-    </ol>
+<div style="float:left;display:inline-block;">
+
+    <button onclick="clearresult()">clear result</button>
+    <br>
+    <button onclick="addip()" value="">try_add</button>
+    <br>
+    <button onclick="querybyname()">try_query_by_name</button>
+    <br>
+    <button onclick="querybytimeinterval()">try_query_by_time_interval</button>
+    <br>
+    <button onclick="deletebyname()">try_delete</button>
+    <br>
+    hostname<input id="name" type="text" value="foo_name"/><br>
+    time/rank range start at:<input id="start" type="text" value="0"><br>
+    time/rank range stop at:<input id="stop" type="text" value="-1"><br>
+    <div id="result">
+        <ol>
+        </ol>
+    </div>
+</div>
+<div id="hostlist">
+    <button onclick="getnamelist()">query name list</button>
+    pattern: <input id="namePattern" type="text" value="*">
+    count:<input id="queryCount" type="text" value="10">
+    <ol></ol>
 </div>
 </body>
 </html>

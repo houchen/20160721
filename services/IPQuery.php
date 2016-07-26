@@ -21,9 +21,10 @@ define('IPRankDB', 0);
 define('InfoDB', 1);
 define('TimeDB', 2);
 define('UnionDB', 3);
+define('LastestUpdateDB', 4);
 
 //keys
-define('nameHash', 'NAME_ID_TABLE');//name与id对应关系的哈希表key,该key在InfoDB中
+define('nameIDKey', 'NAME_ID_TABLE');//name与id对应关系的哈希表key,该key在InfoDB中
 define('nameCounter', 'NAME_COUNTER');//生成name对应id的计数器
 define('logCounter', 'LOG_COUNTER');
 
@@ -52,12 +53,19 @@ class IPQuery
     {
         //基本信息和id生成
         $this->redisConn->select(InfoDB);
-        $name_exist = $this->redisConn->hGet(nameHash, $ipRank->name);
+        $name_exist = $this->redisConn->hGet(nameIDKey, $ipRank->name);
         if ($name_exist == false) {
             $nameID = $this->redisConn->incr(nameCounter);
-            $this->redisConn->hSetNx(nameHash, $ipRank->name, $nameID);
+            $this->redisConn->hSetNx(nameIDKey, $ipRank->name, $nameID);
+            $this->redisConn->hSet(latestUpdateKey, $ipRank->name, $ipRank->createTime);
         } else {
             $nameID = $name_exist;
+//            $time=$this->redisConn->hGet(latestUpdateKey,$ipRank->name);
+//            if($time!=false&& $time<$ipRank->createTime){
+//                $this->redisConn->hSet(latestUpdateKey,$ipRank->name,$ipRank->createTime);
+//            }else{
+//                //error,存在id,但是不存在最后一次更新时间
+//            }
         }
 
         $logID = $this->redisConn->incr(logCounter);
@@ -65,35 +73,34 @@ class IPQuery
         //校验时间是不是存在
         //保存时间点信息
         $this->redisConn->select(TimeDB);
-
         $this->redisConn->zAdd($nameID, $ipRank->createTime, $logID);
         //保存该时间信息的排名信息
         $rank = $ipRank->Rank;
         foreach ($rank as $ip => $score) {
-            $IPlong=ip2long($ip);
+//            $IPlong = ip2long($ip);
             $this->redisConn->select(IPRankDB);
             $this->redisConn->zAdd($logID, $score, $ip);
 //            $this->redisConn->zAdd($logID, $IPlong, $score);
             $this->redisConn->select(UnionDB);
-            $this->redisConn->zIncrBy($nameID,$score,$ip);
+            $this->redisConn->zIncrBy($nameID, $score, $ip);
 //            $this->redisConn->zAdd($nameID,$IPlong,$score);
         }
 
         //在此union?
     }
 
-    public function queryRankByName($name, $start = 0, $stop = -1, $withScores = false)
+    public function queryRankByName($name, $start = 0, $stop = -1, $withScores = false, $withTime = false)
     {
         //查name对应的id,拿到该id,去查对应的所有logid
         $this->redisConn->select(InfoDB);
-        $nameID = $this->redisConn->hGet(nameHash, $name);
+        $nameID = $this->redisConn->hGet(nameIDKey, $name);
         if ($nameID == false) {
             return null;
         }
 
         $this->redisConn->select(TimeDB);
         //防止过大,zCount计数后,分批union,如果有按name筛选,则这里就不需要union
-        $logIDs = $this->redisConn->zRange($nameID, 0, -1);
+        $logIDs = $this->redisConn->zRange($nameID, 0, -1, $withTime);
         error_log(print_r($logIDs, true), 3, LOG_PATH);
 //        $this->redisConn->select(IPRankDB);
         $this->redisConn->select(UnionDB);
@@ -103,14 +110,14 @@ class IPQuery
 //        $this->redisConn->zUnion(TMPZUnionKey, $logIDs);
 
 //        $ranks = $this->redisConn->zRevRange(TMPZUnionKey, $start, $stop, $withScores);
-        $ranks=$this->redisConn->zRevRange($nameID,$start,$stop,$withScores);
+        $ranks = $this->redisConn->zRevRange($nameID, $start, $stop, $withScores);
         //instead delete
         $this->redisConn->move(TMPZUnionKey, UnionDB);
         $this->redisConn->del(TMPZUnionKey);
         $this->redisConn->select(UnionDB);
         $cur_time = time();
         error_log(print_r('curr_time:' . $cur_time, true), 3, LOG_PATH);
-        if($this->redisConn->renameNx(TMPZUnionKey, $nameID . $cur_time)==false){
+        if ($this->redisConn->renameNx(TMPZUnionKey, $nameID . $cur_time) == false) {
             //rename error
         }
         return $ranks;
@@ -120,7 +127,7 @@ class IPQuery
     public function queryRankByTimeInterval($name, $startTime, $stopTime, $withScore = false)
     {
         $this->redisConn->select(InfoDB);
-        $name_id = $this->redisConn->hGet(nameHash, $name);
+        $name_id = $this->redisConn->hGet(nameIDKey, $name);
         if ($name_id == false) {
             return 0;
         }
@@ -131,7 +138,7 @@ class IPQuery
         $this->redisConn->select(IPRankDB);
         $this->redisConn->zUnion(TMPZUnionKey, $logIDs);
         $ranks = $this->redisConn->zRevRange(TMPZUnionKey, 0, -1, $withScore);
-        //move Tmp union to unionDB
+        //todo:缓存union结果
         $this->redisConn->move(TMPZUnionKey, UnionDB);
         $this->redisConn->del(TMPZUnionKey);
         $this->redisConn->select(UnionDB);
@@ -154,11 +161,11 @@ class IPQuery
     public function deleteRankByName($name, $withTime = false)
     {
         $this->redisConn->select(InfoDB);
-        $nameID = $this->redisConn->hGet(nameHash, $name);
+        $nameID = $this->redisConn->hGet(nameIDKey, $name);
         if ($nameID == false) {
             return 0;
         } else {
-            $this->redisConn->hDel(nameHash, $nameID);
+            $this->redisConn->hDel(nameIDKey, $nameID);
         }
 
         $this->redisConn->select(TimeDB);
@@ -175,5 +182,24 @@ class IPQuery
         }
         return $deleted;
     }
+
+    public function getNameList($namePattern = '*', $count = 10)
+    {
+        $this->redisConn->select(InfoDB);
+        $it = null;
+        $names = $this->redisConn->hScan(nameIDKey, $it, $namePattern, $count);
+        return array_slice($names, 0, $count);
+    }
+
+    public function queryTimeRangeByName($name)
+    {
+        $this->redisConn->select(InfoDB);
+        $nameID = $this->redisConn->hGet(nameIDKey, $name);
+        $this->redisConn->select(TimeDB);
+        $start = $this->redisConn->zRange($nameID, 0, 0)[0];
+        $end = $this->redisConn->zRange($nameID, -1, -1)[0];
+        return array('start' => $start, 'end' => $end);
+    }
+
 
 }

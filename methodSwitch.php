@@ -18,7 +18,7 @@ if (isset($_GET['method'])) {
     $queryMethod = 'queryIPRankByName';
 }
 $query = new IPQuery();
-$ipRank=null;
+$ipRank = null;
 switch ($queryMethod) {
     case 'queryIPRankByName':
         $ipRank = $query->queryRankByName($queryPara->name,
@@ -32,11 +32,19 @@ switch ($queryMethod) {
             $queryPara->range->stop,
             $queryPara->withScores);
         break;
+    case 'getNameList':
+        $nameList = $query->getNameList($queryPara->name, $queryPara->count);
+        echo json_encode($nameList);
+        return;
+    case 'queryTimeRange':
+        $timeRange = $query->queryTimeRangeByName($_GET['name']);
+        echo json_encode($timeRange);
+        return;
     case '':
         break;
 }
-$res=new IPSequence();
-$res->name=$queryPara->name;
-$res->createTime=null;
-$res->Rank=$ipRank;
+$res = new IPSequence();
+$res->name = $queryPara->name;
+$res->createTime = null;
+$res->Rank = $ipRank;
 echo json_encode($res);
