@@ -4,7 +4,7 @@
 
 
 - 参数格式： 
-~~~json
+~~~javascript
 {
    'name': 'foo_name',//查询哪个name的排名
    'start': 0,//返回从哪一名开始
