@@ -281,17 +281,17 @@ class rankQuery
         $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp);
 
         $this->use(RankDB);
-        $unionKey = $nameID . '-' . strval($startTimestamp) . '-' . strval($stopTimestamp);
-        $this->_redisConn->zUnion($unionKey, $logIDs);
-        $this->_redisConn->move($unionKey, UnionDB);
+        $mergedKey = $nameID . '-' . strval($startTimestamp) . '-' . strval($stopTimestamp);
+        $this->_redisConn->zUnion($mergedKey, $logIDs);
+        $this->_redisConn->move($mergedKey, UnionDB);
 
         $this->use(UnionDB);
-        $ranks = $this->_redisConn->zRevRange($unionKey, 0, -1, $withScores);
+        $ranks = $this->_redisConn->zRevRange($mergedKey, 0, -1, $withScores);
 
         if ($withTime == true) {
             $this->associateRankTime($nameID, $ranks, $withScores);
         }
-        $this->_redisConn->del($unionKey);
+        $this->_redisConn->del($mergedKey);
         return $ranks;
     }
 

@@ -103,7 +103,7 @@
             start: 12312,
             stop: 1232333,
             withScores: true,
-            withTime:false
+            withTime: false
         };
 
         function querybytimeinterval() {
@@ -167,9 +167,7 @@
                 data: {data: JSON.stringify(query_name_para)},
                 success: function (data) {
                     for (var name in data) {
-//                        timerange = queryTimeRangeByName(name);
-//                        $('#hostlist').find('ol').append('<li>' + name + ' ' + timerange['start']+ ' ' + timerange['stop'] + '</li>');
-                        $('#hostlist').find('ol').append('<li>' + name + '</li>');
+                        $('#hostlist').find('ol').append('<li>' + data[name] + '</li>');
                     }
                 },
                 error: function (data) {
