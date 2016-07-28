@@ -8,23 +8,25 @@
 
 header('Content-type:text/json');
 
-require_once('services/IPQuery.php');
-require_once('model/IPSequence.php');
+require_once('services/queryRankService.php');
+require_once('model/IPRank.php');
 
+//session_destroy();
 $queryPara = json_decode($_POST['data']);
 if (isset($_GET['method'])) {
     $queryMethod = $_GET['method'];
 } else {
     $queryMethod = 'queryIPRankByName';
 }
-$query = new IPQuery();
+$query = new rankQuery();
 $ipRank = null;
 switch ($queryMethod) {
     case 'queryIPRankByName':
-        $ipRank = $query->queryRankByName($queryPara->name,
+        $ipRank = $query->queryRankByName2($queryPara->name,
             $queryPara->range->start,
             $queryPara->range->stop,
-            $queryPara->withScores);
+            $queryPara->withScores,
+            $queryPara->withTime);
         break;
     case 'queryIPRankByTimeInterval':
         $ipRank = $query->queryRankByTimeInterval($queryPara->name,
@@ -43,7 +45,7 @@ switch ($queryMethod) {
     case '':
         break;
 }
-$res = new IPSequence();
+$res = new IPRank();
 $res->name = $queryPara->name;
 $res->createTime = null;
 $res->Rank = $ipRank;

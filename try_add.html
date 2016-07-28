@@ -14,12 +14,12 @@
             padding: 10px;
         }
     </style>
-    <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="static/js/jquery.min.js"></script>
     <script type="application/javascript">
         var ipdata = {
             "name": "foo_name",
-            "createTime": '',
-            "Rank": {
+            "time": '',
+            "rank": {
                 "A192.168.1.1": 12,
                 "B172.15.1.125": 56,
                 'C172.16.123.18': 10000,
@@ -27,7 +27,7 @@
             }
         };
         function addip() {
-            ipdata['createTime'] = Date.now() / 1000;
+            ipdata['time'] = Date.now() / 1000;
             ipdata['name'] = $('#name').val();
 //            ipdata.range.start = $('start').val();
 //            ipdata.range.stop = $('stop').val();
@@ -48,20 +48,22 @@
         var query_param = {
             'name': 'foo_name',
             //指定范围,这里查询全部范围
-            'range': {
-                'start': 0,
-                'stop': -1
-            },
+            'start': 0,
+            'stop': -1,
             //带不带分数的查询
-            withScores: true
+            withScores: true,
+            withTime: true,
+            byScore: false
         };
 
         function querybyname() {
             query_param['name'] = $('#name').val();
-            query_param.range.start = $('#start').val();
-            query_param.range.stop = $('#stop').val();
+            query_param.start = $('#start').val();
+            query_param.stop = $('#stop').val();
+            query_param.withScores = $('input[name=withScores]').is(':checked');
+            query_param.withTime = $('input[name=withTime]').is(':checked');
             $.ajax({
-                url: 'methodSwitch.php?method=queryIPRankByName',
+                url: 'query.php?method=queryRankByName',
                 type: 'post',
                 dataType: 'json',
                 data: {data: JSON.stringify(query_param)},
@@ -70,10 +72,25 @@
                             '<br>create time:' + data['createTime'];
 //                    document.write(html);
                     $('#result').find('ol').append('<li>' + html + '</li>');
-                    var ipCount = data['Rank'];
-                    for (var ip in ipCount) {
-                        $('ol').append('<li>ip:' + ip + ' rank:' + ipCount[ip] + '</li>');
+                    var rank = data['Rank'];
+                    if (query_param.withTime && query_param.withScores) {
+                        for (var ip in rank) {
+                            $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip][0] + 'time: ' + new Date(rank[ip][1] * 1000).toString() + '</li>');
+                        }
+                    } else if (query_param.withScores) {
+                        for (var ip in rank) {
+                            $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip] + '</li>');
+                        }
+                    } else if (query_param.withTime) {
+                        for (var ip in rank) {
+                            $('#result').find('ol').append('<li>ip:' + ip + 'time:' + new Date(rank[ip] * 1000).toString() + '</li>');
+                        }
+                    } else {
+                        for (var ip in rank) {
+                            $('#result').find('ol').append('<li>ip:' + rank[ip] + '</li>');
+                        }
                     }
+
                 },
                 error: function (data) {
                     document.write('query failed!');
@@ -83,21 +100,20 @@
 
         var query_param_by_timeinterval = {
             'name': 'foo_name',
-            'range': {
-                start: 12312,
-                stop: 1232333
-            },
-            withScores: true
+            start: 12312,
+            stop: 1232333,
+            withScores: true,
+            withTime:false
         };
 
         function querybytimeinterval() {
 //            query_param_by_timeinterval['range']['stop'] = Date.now();
 //            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
             query_param_by_timeinterval['name'] = $('#name').val();
-            query_param_by_timeinterval['range'].start = $('#start').val();
-            query_param_by_timeinterval['range'].stop = $('#stop').val();
+            query_param_by_timeinterval.start = $('#start').val();
+            query_param_by_timeinterval.stop = $('#stop').val();
             $.ajax({
-                url: 'methodSwitch.php?method=queryIPRankByTimeInterval',
+                url: 'query.php?method=queryRankByTimeInterval',
                 type: 'post',
                 dataType: 'json',
                 data: {data: JSON.stringify(query_param_by_timeinterval)},
@@ -145,9 +161,9 @@
             query_name_para.name = $('#namePattern').val();
             query_name_para.count = $('#queryCount').val();
             $.ajax({
-                url: 'methodSwitch.php?method=getNameList',
+                url: 'query.php?method=getNameList',
                 type: 'post',
-                dateType: 'json',
+                dataType: 'json',
                 data: {data: JSON.stringify(query_name_para)},
                 success: function (data) {
                     for (var name in data) {
@@ -185,14 +201,16 @@
     <button onclick="addip()" value="">try_add</button>
     <br>
     <button onclick="querybyname()">try_query_by_name</button>
+    <input type="checkbox" name="withScores" value="true" checked="checked">withScores
+    <input type="checkbox" name="withTime" value="true">withTime
     <br>
     <button onclick="querybytimeinterval()">try_query_by_time_interval</button>
     <br>
     <button onclick="deletebyname()">try_delete</button>
     <br>
     hostname<input id="name" type="text" value="foo_name"/><br>
-    time/rank range start at:<input id="start" type="text" value="0"><br>
-    time/rank range stop at:<input id="stop" type="text" value="-1"><br>
+    unix timestamp/rank start at:<input id="start" type="text" value="0"><br>
+    unix timestamp/rank stop at:<input id="stop" type="text" value="-1"><br>
     <div id="result">
         <ol>
         </ol>

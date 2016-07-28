@@ -1,4 +1,4 @@
-word=[
+words=[
     "people",
     "history",
     "way",

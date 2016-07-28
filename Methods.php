@@ -6,7 +6,3 @@
  * Date: 7/25/16
  * Time: 3:02 PM
  */
-class Methods
-{
-
-}

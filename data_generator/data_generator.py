@@ -1,16 +1,16 @@
 # encoding=utf-8
 import random
-import string
-import struct
-import socket
+from randomIP import getRandomIP
 import urllib, urllib2, json, requests
 from urllib import urlencode
-from word import word
+from word import words
 
 websitprefix = ['www.', 'mail.', 'bbs.']
 websitpsuffix = ['.com', '.cn', '.org']
 
 import time
+
+RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
 
 
 def timestamp_datetime(value):
@@ -43,24 +43,9 @@ def datetime_timestamp(dt):
 
 data_time = datetime_timestamp('2016-07-20 06:53:40')
 
-RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
-
-
-def __get_random_ip(str_ip):
-    # str_ip = RANDOM_IP_POOL[random.randint(0, len(RANDOM_IP_POOL) - 1)]
-    str_ip_addr = str_ip.split('/')[0]
-    str_ip_mask = str_ip.split('/')[1]
-    ip_addr = struct.unpack('>I', socket.inet_aton(str_ip_addr))[0]
-    mask = 0x0
-    for i in range(31, 31 - int(str_ip_mask), -1):
-        mask |= 1 << i
-    ip_addr_min = ip_addr & (mask & 0xffffffff)
-    ip_addr_max = ip_addr | (~mask & 0xffffffff)
-    return socket.inet_ntoa(struct.pack('>I', random.randint(ip_addr_min, ip_addr_max)))
-
 
 def randomwebsite():
-    web = random.choice(websitprefix) + random.choice(word) + (random.choice(websitpsuffix))
+    web = random.choice(websitprefix) + random.choice(words) + (random.choice(websitpsuffix))
     print web
     return web
 
@@ -89,10 +74,10 @@ for i in range(1, 100):
         randomtime = data_time + random.randint(-259200, 259200)
         rank_str = ''
         for ip in range(random.randint(10, 40)):
-            rank_str += '    "' + __get_random_ip(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
+            rank_str += '    "' + getRandomIP(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
         rank_str = rank_str[:-2] + '\n'
-        json = '{"name":"' + randomweb + '",\n"createTime":' + str(
-            randomtime) + ',\n"Rank":{\n' + rank_str + '}}\n\n'
+        json = '{"name":"' + randomweb + '",\n"time":' + str(
+            randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
         addip(json)
         webdata.write(json)
     webdata.close()

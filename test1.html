@@ -69,7 +69,7 @@
 <table id="table">
     <thead>
     <tr class="tr">
-        <td class="td1">createTime</td>
+        <td class="td1">update time</td>
         <td class="td2">Rank</td>
         <td class="td3">IP</td>
     </tr>
@@ -79,6 +79,7 @@
 </table>
 <hr style="margin-top:50px;">
 <div id="container" style="min-width:700px;height:400px"></div>
+<script type="text/javascript" src="static/js/DateFormat.js"></script>
 <script>
     //向数据库中添加数据
     var ipdata = {
@@ -108,16 +109,17 @@
         })
     }
     //调用添加数据的方法；
-    addip();
+//    addip();
     var query_param = {
         'name': 'bbs.drawing.com',
         //指定范围,这里查询全部范围
         'range': {
             'start': 0,
-            'stop':100
+            'stop':10
         },
         //带不带分数的查询
-        withScores: true
+        withScores: true,
+        withTime:true
     };
     var i = 0;
     function querybyname() {
@@ -208,11 +210,14 @@
         var strTime =  eval_res.createTime;
         var strValue = eval_res.Rank;
         var strName = eval_res.name;
-        var aIp = new Array();
-        var aCount = new Array();
+        var aIp = [];
+        var aCount = [];
+        var updateTime=[];
+        var unixtime=new Date();
         for (var item in strValue) {
             aIp.push(item);
-            aCount.push(strValue[item]);
+            aCount.push(strValue[item][0]);
+            updateTime.push(new Date(strValue[item][1]*1000).Format('yyyy-MM-dd hh:mm:ss').toString());
         }
         //创建列表
         if ($("#tbody").html()) {
@@ -221,7 +226,7 @@
                 var tr = $("<tr></tr>");
                 var tdName = $("<td></td>");
                 tdName.addClass("td1");
-                tdName.html(strTime);
+                tdName.html(updateTime[i]);
 
                 var tdCount = $("<td></td>");
                 tdCount.addClass("td2");
@@ -262,13 +267,10 @@
         $(function () {
             $('#container').highcharts({
                 chart: {
-                    type: 'line'
+                    type: 'bar'
                 },
                 title: {
                     text: '当前IP Rank总计'
-                },
-                subtitle: {
-                    text: "时间：" + strTime
                 },
                 xAxis: {
                     categories: aIp
@@ -278,14 +280,15 @@
                         text: 'Rank'
                     }
                 },
-                plotOptions: {
-                    line: {
-                        dataLabels: {
-                            enabled: true
-                        },
-                        enableMouseTracking: false
-                    }
-                },
+//
+//                plotOptions: {
+//                    line: {
+//                        dataLabels: {
+//                            enabled: true
+//                        },
+//                        enableMouseTracking: false
+//                    }
+//                },
                 series: [{
                     name: strName,
                     data: aCount
