@@ -1,8 +1,6 @@
 # encoding=utf-8
 import random
-import string
-import struct
-import socket
+from randomIP import getRandomIP
 import urllib, urllib2, json, requests
 from word import words
 import time
@@ -11,6 +9,8 @@ websitprefix = ['www.', 'mail.', 'bbs.']
 websitpsuffix = ['.com', '.cn', '.org']
 
 import time
+
+RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
 
 
 def timestamp_datetime(value):
@@ -41,23 +41,8 @@ def datetime_timestamp(dt):
 #     s = timestamp_datetime(1332888820)
 #     print s
 
-#data_time = datetime_timestamp('2016-07-26 09:53:40')
-data_time=time.time()
-
-RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
-
-
-def __get_random_ip(str_ip):
-    # str_ip = RANDOM_IP_POOL[random.randint(0, len(RANDOM_IP_POOL) - 1)]
-    str_ip_addr = str_ip.split('/')[0]
-    str_ip_mask = str_ip.split('/')[1]
-    ip_addr = struct.unpack('>I', socket.inet_aton(str_ip_addr))[0]
-    mask = 0x0
-    for i in range(31, 31 - int(str_ip_mask), -1):
-        mask |= 1 << i
-    ip_addr_min = ip_addr & (mask & 0xffffffff)
-    ip_addr_max = ip_addr | (~mask & 0xffffffff)
-    return socket.inet_ntoa(struct.pack('>I', random.randint(ip_addr_min, ip_addr_max)))
+# data_time = datetime_timestamp('2016-07-26 09:53:40')
+data_time = time.time()
 
 
 def randomwebsite():
@@ -79,37 +64,16 @@ def addip(ip_json):
     print r.read()
 
 
-randomtime = data_time;
+randomtime = data_time
 while 1:
     rank_str = ''
     website = 'bbs.drawing.com'
     randomtime += 1
     ip_str = random.choice(RANDOM_IP_POOL)
     for ip_count in range(random.randint(10, 40)):
-        rank_str += '    "' + __get_random_ip(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
+        rank_str += '    "' + getRandomIP(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
     rank_str = rank_str[:-2] + '\n'
     json = '{"name":"' + website + '",\n"time":' + str(
         randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
     addip(json)
     time.sleep(1)
-
-weblist = open('weblist.txt', 'w')
-for i in range(1, 100):  # web站点循环
-    randomweb = randomwebsite()
-    weblist.write(randomweb)
-    weblist.write('\n')
-    webdata = open(randomweb, 'w')
-    ip_str = random.choice(RANDOM_IP_POOL)
-    for k in range(1, random.randint(2, 10)):  # 给这些网站生成随机的时间内的数据
-        randomtime = data_time + random.randint(-604800, 0)
-        rank_str = ''
-        for ip in range(random.randint(10, 40)):  # 生成随机时间内的ip
-            rank_str += '    "' + __get_random_ip(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
-        rank_str = rank_str[:-2] + '\n'
-        json = '{"name":"' + randomweb + '",\n"time":' + str(
-            randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
-        addip(json)
-        webdata.write(json)
-    webdata.close()
-    # f2.flush()
-weblist.close()

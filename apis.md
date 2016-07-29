@@ -1,4 +1,4 @@
-### 请求总排名的top N：
+请求总排名的top N：
 
 - 请求地址： query.php?method=queryRankByName
 
@@ -78,7 +78,7 @@ name和time意义同上，rank对象的key为ip，如果是withScores选项，�
 - 请求地址:   query.php?method=queryRankByTimeInterval
 > 这个接口要做大量的union,最好不要频繁请求。每分钟请求1小时的数据,也没有意义,因为1小时之内,排名基本也不会变化
 - 参数格式
-~~~
+~~~javascript
 {
     'name': 'foo_name',//指定了查询哪个名字的时间段排名
      start: 12312,//从哪个时间点开始,时间戳

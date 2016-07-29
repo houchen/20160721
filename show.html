@@ -6,126 +6,15 @@
     <script type="text/javascript" src="http://cdn.hcharts.cn/jquery/jquery-1.8.3.min.js"></script>
     <script type="text/javascript" src="http://cdn.hcharts.cn/highcharts/highcharts.js"></script>
     <script type="text/javascript" src="http://cdn.hcharts.cn/highcharts/modules/exporting.js"></script>
-    <style type="text/css">
-        body {
-            background: black;
-            color: white;
-        }
-
-        select {
-            border: solid 1px #000;
-            appearance: none;
-            -moz-appearance: none;
-            -webkit-appearance: none;
-            background: url("http://ourjs.github.io/static/2015/arrow.png") no-repeat scroll right center transparent;
-            padding-right: 14px;
-        }
-
-        select::-ms-expand {
-            display: none;
-        }
-
-        .selectName {
-            width: 150px;
-            height: 30px;
-            font-size: 14px;
-            padding: 0 4%;
-            margin: 0;
-            border: 1px solid white;
-            color: white;
-        }
-
-        .selectName option {
-            text-align: center;
-        }
-
-        .inputName {
-            width: 150px;
-            height: 30px;
-            border: 1px solid black;
-            font-size: 14px;
-        }
-
-        .titleName {
-            margin-left: 50px;
-            font-family: "微软雅黑";
-            /* margin-top:30px;*/
-        }
-
-        .div01 {
-            display: inline-block;
-            float: left;
-            margin-left: 100px;
-        }
-
-        .div02 {
-            display: inline-block;
-            float: left;
-            margin-left: 100px;
-        }
-
-        .div03 {
-            display: inline-block;
-            float: left;
-            margin-left: 50px;
-            background: red;
-            border-radius: 8px;
-            width: 350px;
-            height: 100px;
-            /* margin-top:30px;*/
-        }
-
-        .btn {
-            width: 180px;
-            height: 40px;
-            background: red;
-            border-radius: 8px;
-            margin-top: 10px;
-            line-height: 40px;
-            text-align: center;
-        }
-
-        .btn:hover {
-            cursor: pointer;
-        }
-
-        .inputScore {
-            display: inline-block;
-            margin-top: 10px;
-            margin-left: 30px;
-        }
-
-        .inputInterval {
-            margin-top: 10px;
-            width: 60px;
-            margin-left: 10px;
-        }
-
-        .inputTime {
-            margin-top: 10px;
-        }
-
-        .inputTitle {
-            margin-left: 30px;
-        }
-
-        .picture01 {
-            display: inline-block;
-            float: left;
-            min-width: 380px;
-            height: 300px;
-            margin-left: 10px;
-            margin-top: 10px;
-            /* border:1px solid red;*/
-        }
-    </style>
+    <script type="text/javascript" src="static/js/vue.js"></script>
+    <link rel="stylesheet" type="text/css" href="show.css">
 </head>
 <body>
 <div style="width:100%;height:100px;">
     <div class="div01">
         <h3 class="titleName">请选择所要展示的name</h3>
         <input class="inputName" placeholder="请输入name的过滤条件" type="text"/>
-        <select class="selectName">
+        <select id="nameList" class="selectName">
             <option>请选择</option>
         </select>
     </div>
@@ -133,21 +22,28 @@
         <div id="chose" class="btn">选择需要显示的条件</div>
         <div class="btn">清除历史排名</div>
     </div>
-    <div class="div03" style="display:none;">
-        <input class="inputScore" type="checkbox" checked="checked"> 显示分数<br>
-        <input class="inputScore inputTime" type="checkbox"> 显示更新时间<br>
-        <span class="inputTitle">请输入排名范围:</span>
-        <input class="inputInterval" type="text"><span> — </span><input class="inputInterval" type="text">
+    <div class="div03">
+        <input class="inputScore" type="checkbox" checked="checked" id="withScores">
+        <label>显示分数</label><br>
+        <input class="inputScore inputTime" type="checkbox" id="withTime"> 显示更新时间<br>
+        查询
+        <select id='queryType' name="queryType">
+            <option value='false'>排名</option>
+            <option value='true'>分数</option>
+        </select>
+        大于<input id='start' class="inputInterval" type="text" value="0"><span> 并且小于 </span><input id='stop'
+                                                                                                  class="inputInterval"
+                                                                                                  type="text"
+                                                                                                  value="10">的纪录
     </div>
 </div>
 <hr style="margin-top:20px;">
-<div class="picture01" id="pic01"></div>
-<div id="container" class="picture01"></div>
-<div class="picture01" id="pic02"></div>
-<div class="picture01" id="pic03"></div>
+<div class="diagram" id="pic01" id="topNCanvas"></div>
+<div id="container" class="diagram" id="10minTopNCanvas"></div>
+<div class="diagram" id="pic02"></div>
+<div class="diagram" id="pic03"></div>
 
 <script type="text/javascript">
-
     //获得的name的形式：{'fsadf','fasdf','fdsafas','log_Ip','log_name'}
     //创建select的option项
     $.ajax({
@@ -155,11 +51,7 @@
         type: 'get',
         dataType: 'json',
         success: function (data) {
-            var nameContent = [];
-            var i = 0;
-            for (var name in data) {
-                nameContent[i++] = name;
-            }
+            var nameContent = data;
             var selectName = $(".selectName");
             for (var i = 0; i < nameContent.length; i++) {
                 var opt = $("<option></option>");
@@ -169,7 +61,7 @@
         }
     });
     //过滤框内容发生改变
-    $(".inputName").on('change', function () {
+    $('.inputName').on('change', function () {
         $(".selectName").find("option").show();
         var inputNameValue = $(".inputName").val();
         $(".selectName option").each(function () {
@@ -179,6 +71,49 @@
         });
     });
 
+    function plot(canvasID, title, subtitle, series, type) {
+
+    }
+
+    function refreshTopN() {
+        var queryParam = {};
+        var url = 'query.php?method=queryRankByName';
+        queryParam.name = $('#nameList').find('option:selected').text();
+        if(queryParam.name=='请选择'){
+            return
+        }
+        queryParam.byScore = $('#queryType').find('option:selected').val();
+        queryParam.start = $('#start').val();
+        queryParam.stop = $('#stop').val();
+        queryParam.withTime = $('#withTime').is(':checked');
+        queryParam.withScores = $('#withScores').is(':checked');
+
+        $.ajax({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: {data: JSON.stringify(queryParam)},
+            success: function (data) {
+                plot('topNCanvas',
+                        'Top' + (queryParam.stop - queryParam.start) + '排名',
+                        data.name,
+                        data.rank,
+                        'bar')
+            }
+        })
+    }
+
+    function refresh30min() {
+
+    }
+
+    function refresh60min() {
+
+    }
+
+    function refresh120min() {
+
+    }
     //过滤框点击事件
     $(".inputName").on('click', function () {
         $(".selectName option:first").prop("selected", 'selected');
@@ -209,7 +144,7 @@
         };
 
         $.ajax({
-            url:'query.php?method=queryRankByName'
+            url: 'query.php?method=queryRankByName'
         })
         return data;
     }
@@ -276,6 +211,7 @@
     }
     //每隔5s显示一次数据。
     $(function () {
+        setInterval("refreshTopN()", 5000);
         showData("pic01", "line", "排名前10的数据展示", "时间：" + strTime, strName, strValue);
         // showData("pic02","line","排名前10的数据展示","时间：" + strTime,strName,strValue);
         showData("container", "column", "排名大于10的数据展示", "时间：" + strTime, strName, strValue);
