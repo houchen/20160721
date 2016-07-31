@@ -60,7 +60,11 @@ class rankQuery
 
     private function use ($db)
     {
-        $this->_redisConn->select($db);
+        static $currDB = 0;
+        if ($currDB != $db) {
+            $this->_redisConn->select($db);
+            $currDB = $db;
+        }
     }
 
     private function getNameID($name)
@@ -200,7 +204,7 @@ class rankQuery
     {
         $nameIDs = $this->getNameIDList($namePattern, 100);
         $i = 0;
-        $rankArr=null;
+        $rankArr = null;
         foreach ($nameIDs as $name => $id) {
             $rank = $this->queryRankByID($id, $start, $stop, $withScores, $withTime, $byScore);
             $rankArr[$i++] = array('name' => $name, 'rank' => $rank);
