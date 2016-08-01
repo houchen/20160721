@@ -109,24 +109,44 @@
         })
     }
     //调用添加数据的方法；
-//    addip();
+    //    addip();
     var query_param = {
-        'name': 'bbs.drawing.com',
+        'name': 'www.building.com',
         //指定范围,这里查询全部范围
-        'range': {
-            'start': 0,
-            'stop':10
-        },
+        'start': 0,
+        'stop': 99999999999,
         //带不带分数的查询
         withScores: true,
-        withTime:true
+        withTime: false,
+        count: 10
     };
     var i = 0;
-    function querybyname() {
+    function querybyname2() {
         console.log(i++);
+        query_param.name = 'www.dimension.cn';
         var reJson;
         $.ajax({
-            url: 'methodSwitch.php?method=queryIPRankByName',
+            url: 'query.php?method=queryRankByTimeInterval',
+            type: 'post',
+            dataType: 'json',
+            async: false,
+            cache: false,
+            data: {data: JSON.stringify(query_param)},
+            success: function (data) {
+                reJson = data;
+            },
+            error: function (data) {
+                document.write('query failed!');
+            }
+        });
+        return reJson;
+    }
+    function querybyname() {
+        console.log(i++);
+        query_param.name = 'www.building.com';
+        var reJson;
+        $.ajax({
+            url: 'query.php?method=queryRankByTimeInterval',
             type: 'post',
             dataType: 'json',
             async: false,
@@ -207,17 +227,27 @@
     //每隔5s刷新一次数据
     function showData() {
         var eval_res = eval('querybyname()');
-        var strTime =  eval_res.createTime;
-        var strValue = eval_res.Rank;
+        var eval_res2 = eval('querybyname2()');
+        var strTime = eval_res.time;
+        var strValue = eval_res.rank;
+        var strValue2 = eval_res2.rank;
         var strName = eval_res.name;
+        var strName2 = eval_res2.name;
         var aIp = [];
+        var aIp2 = [];
         var aCount = [];
-        var updateTime=[];
-        var unixtime=new Date();
+        var aCount2 = [];
+        var updateTime = [];
+        var unixtime = new Date();
         for (var item in strValue) {
             aIp.push(item);
-            aCount.push(strValue[item][0]);
-            updateTime.push(new Date(strValue[item][1]*1000).Format('yyyy-MM-dd hh:mm:ss').toString());
+            aCount.push(strValue[item]);
+//            updateTime.push(new Date(strValue[item][1] * 1000).Format('yyyy-MM-dd hh:mm:ss').toString());
+        }
+        for (var item in strValue2) {
+            aIp2.push(item);
+            aCount2.push(strValue[item]);
+//            updateTime.push(new Date(strValue[item][1] * 1000).Format('yyyy-MM-dd hh:mm:ss').toString());
         }
         //创建列表
         if ($("#tbody").html()) {
@@ -267,7 +297,7 @@
         $(function () {
             $('#container').highcharts({
                 chart: {
-                    type: 'bar'
+                    type: 'column'
                 },
                 title: {
                     text: '当前IP Rank总计'
@@ -277,21 +307,15 @@
                 },
                 yAxis: {
                     title: {
-                        text: 'Rank'
+                        text: 'rank'
                     }
                 },
-//
-//                plotOptions: {
-//                    line: {
-//                        dataLabels: {
-//                            enabled: true
-//                        },
-//                        enableMouseTracking: false
-//                    }
-//                },
                 series: [{
                     name: strName,
                     data: aCount
+                }, {
+                    name: strName2,
+                    data: aCount2
                 }]
             });
         });

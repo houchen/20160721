@@ -40,8 +40,13 @@ switch ($queryMethod) {
             $queryPara->start,
             $queryPara->stop,
             $queryPara->withScores,
-            $queryPara->withTime);
-        echo json_encode($Rank);
+            $queryPara->withTime,
+            $queryPara->count);
+        $json=new IPRank();
+        $json->rank=$Rank;
+        $json->name=$queryPara->name;
+        $json->time=time();
+        echo json_encode($json);
         break;
     case 'getNameList':
         $nameList = $query->getNameList();

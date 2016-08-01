@@ -20,7 +20,7 @@
     </div>
     <div class="div02">
         <div id="chose" class="btn">选择需要显示的条件</div>
-        <div class="btn">清除历史排名</div>
+        <div id="deleteRank" class="btn">清除历史排名</div>
     </div>
     <div class="div03">
         <input class="inputScore" type="checkbox" checked="checked" id="withScores">
@@ -28,8 +28,8 @@
         <input class="inputScore inputTime" type="checkbox" id="withTime"> 显示更新时间<br>
         查询
         <select id='queryType' name="queryType">
-            <option value='false'>排名</option>
-            <option value='true'>分数</option>
+            <option value=0>排名</option>
+            <option value=1>分数</option>
         </select>
         大于<input id='start' class="inputInterval" type="text" value="0"><span> 并且小于 </span><input id='stop'
                                                                                                   class="inputInterval"
@@ -44,7 +44,6 @@
 <div class="diagram" id="pic03"></div>
 
 <script type="text/javascript">
-    //获得的name的形式：{'fsadf','fasdf','fdsafas','log_Ip','log_name'}
     //创建select的option项
     $.ajax({
         url: 'query.php?method=getNameList',
@@ -71,22 +70,171 @@
         });
     });
 
-    function plot(canvasID, title, subtitle, series, type) {
+    $('.selectName').on('change', function () {
+//         refreshTopN();
+    });
+
+    $('#deleteRank').on('click', function () {
+        alert('删除了' + deleteByName() + '条数据');
+    })
+    var scoreSelect = $('#withScores').is(':checked');
+    var timeSelect = $('#withTime').is(':checked');
+    function updateTopNTable(data) {
 
     }
-
     function refreshTopN() {
+        var resJson;
         var queryParam = {};
         var url = 'query.php?method=queryRankByName';
         queryParam.name = $('#nameList').find('option:selected').text();
-        if(queryParam.name=='请选择'){
+        if (queryParam.name == '请选择') {
             return
         }
         queryParam.byScore = $('#queryType').find('option:selected').val();
         queryParam.start = $('#start').val();
         queryParam.stop = $('#stop').val();
+        queryParam.withTime = timeSelect;
+        queryParam.withScores = scoreSelect;
+
+        $.ajax({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            async: false,
+            data: {data: JSON.stringify(queryParam)},
+            success: function (data) {
+                resJson = data;
+            }
+        });
+        return resJson;
+    }
+
+    function updateDiagram(chartId, type, title, subtitle, strName,freshMethod) {
+
+        var rankValue = freshMethod();
+        var nameValue = rankValue.name;
+
+        //得到排名数据
+        var valueIpArray = new Array();//存储IP
+        var valueTimeArray = new Array();//存储time
+        var valueCountArray = new Array();//存储count
+
+        function refreshTopNValue(rankValue) {
+            var value = rankValue['rank'];
+            if (scoreSelect == true && timeSelect == true) {
+                for (var item in value) {
+                    valueIpArray.push(item);
+                    valueCountArray.push(value[item][0]);
+                    valueTimeArray.push(value[item][1]);
+                }
+                return;
+            } else if (scoreSelect == true && timeSelect == false) {
+                for (var item in value) {
+                    valueIpArray.push(item);
+                    valueCountArray.push(value[item]);
+                }
+                return;
+
+            } else if (scoreSelect == false && timeSelect == true) {
+                for (var item in value) {
+                    valueIpArray.push(item);
+                    valueTimeArray.push(value[item]);
+                }
+                return;
+
+            } else {
+                for (var item in value) {
+                    valueIpArray.push(item);
+                }
+                return;
+            }
+        }
+
+        //根据后台返回的数据总数决定要显示的图形，如果数据量总数在10(包含10)以内，则只显示折线图，如果数据量总数超过10,则将10以外的数据综合显示成柱状图，点击柱状图则可以显示对应数据的折线图。
+        function showData() {
+            refreshTopNValue(rankValue);
+            var chart;
+            chart = new Highcharts.Chart({
+                chart: {
+                    renderTo: chartId,
+                    type: type
+                },
+                title: {
+                    text: title
+                },
+                subtitle: {
+                    text: subtitle
+                },
+                xAxis: {
+                    categories: valueIpArray
+                },
+                yAxis: {
+                    title: {
+                        text: 'count'
+                    }
+                },
+                plotOptions: {
+                    /*柱状图的点击事件*/
+                    column: {
+                        cursor: 'pointer',
+                        point: {
+                            events: {
+                                click: function () {
+                                    var drilldown = 1;
+                                    if (drilldown) { // drill down
+                                        showData("pic02", "line", "数据详情", "对应数据详情", strNme, strValue);
+                                    } else { // restore
+                                        alert("yes,I am comming!");
+                                        showData("container", "column", "排名大于10的数据展示", "时间：" + strTime, strName, strValue);
+                                    }
+                                }
+                            }
+                        },
+                        dataLabels: {
+                            enabled: true,
+                        },
+                    }
+                },
+                series: [{
+                    name: strName,
+                    data: valueCountArray
+                }]
+            });
+        }
+
+    }
+
+
+    function deleteByName() {
+        var count;
+        var delParam = {};
+        delParam.name = $('#nameList').find('option:selected').text();
+        $.ajax({
+            url: 'delete.php',
+            type: 'post',
+            dataType: 'json',
+            async: false,
+            data: {data: JSON.stringify(delParam)},
+            success: function (data) {
+                count = data.count;
+            }
+        });
+        return count;
+    }
+
+    function refresh30min() {
+        var url = 'query.php?method=queryRankByTimeInterval';
+        var queryParam = {};
+        queryParam.name = $('#nameList').find('option:selected').text();
+        if (queryParam.name == '请选择') {
+            return
+        }
+//        queryParam.byScore = $('#queryType').find('option:selected').val();
+        queryParam.start = Date.now() / 1000 - (30 * 60);//从过去时间开始
+        queryParam.stop = Date.now() / 1000;//到现在时间结束
         queryParam.withTime = $('#withTime').is(':checked');
         queryParam.withScores = $('#withScores').is(':checked');
+        queryParam.count = 10;
 
         $.ajax({
             url: url,
@@ -94,17 +242,9 @@
             dataType: 'json',
             data: {data: JSON.stringify(queryParam)},
             success: function (data) {
-                plot('topNCanvas',
-                        'Top' + (queryParam.stop - queryParam.start) + '排名',
-                        data.name,
-                        data.rank,
-                        'bar')
+                plot('30minTopNCanvas', '30分钟Top10排名', data.name, data.rank, 'bar');
             }
         })
-    }
-
-    function refresh30min() {
-
     }
 
     function refresh60min() {
@@ -114,6 +254,7 @@
     function refresh120min() {
 
     }
+
     //过滤框点击事件
     $(".inputName").on('click', function () {
         $(".selectName option:first").prop("selected", 'selected');
@@ -123,100 +264,15 @@
         $(".div03").fadeIn("slow");
     });
 
-    //用于模拟每个一段时间更新数据，暂定为5s.
-    function getValue() {
-        var data = {
-            "name": "www.kgx.org",
-            "createTime": "1468827524",
-            "value": {
-                "192.168.10.96": 3113,
-                "192.168.10.69": 4221,
-                "192.168.10.201": 2711,
-                "192.168.10.3": 3324,
-                "192.168.10.248": 736,
-                "192.168.10.185": 933,
-                "192.168.10.1": 3464,
-                "192.168.10.151": 1604,
-                "192.168.10.17": 752,
-                "192.168.10.7": 3267
-            },
-            "range": "1-10"
-        };
-
-        $.ajax({
-            url: 'query.php?method=queryRankByName'
-        })
-        return data;
-    }
-    var value = getValue();
-    var strTime = eval('getValue().' + "createTime");
-    var strValue = eval('getValue().' + "value");
-    var strName = eval('getValue().' + "name");
-    //根据后台返回的数据总数决定要显示的图形，如果数据量总数在10(包含10)以内，则只显示折线图，如果数据量总数超过10,则将10以外的数据综合显示成柱状图，点击柱状图则可以显示对应数据的折线图。
-    // if()
-    function showData(chartId, type, title, subtitle, strNme, strValue) {
-        var aIp = new Array();
-        var aCount = new Array();
-        for (var item in strValue) {
-            aIp.push(item);
-            aCount.push(strValue[item]);
-        }
-        var chart;
-        chart = new Highcharts.Chart({
-            chart: {
-                renderTo: chartId,
-                type: type
-            },
-            title: {
-                text: title
-            },
-            subtitle: {
-                text: subtitle
-            },
-            xAxis: {
-                categories: aIp
-            },
-            yAxis: {
-                title: {
-                    text: 'count'
-                }
-            },
-            plotOptions: {
-                /*柱状图的点击事件*/
-                column: {
-                    cursor: 'pointer',
-                    point: {
-                        events: {
-                            click: function () {
-                                var drilldown = 1;
-                                if (drilldown) { // drill down
-                                    showData("pic02", "line", "数据详情", "对应数据详情", strNme, strValue);
-                                } else { // restore
-                                    alert("yes,I am comming!");
-                                    showData("container", "column", "排名大于10的数据展示", "时间：" + strTime, strName, strValue);
-                                }
-                            }
-                        }
-                    },
-                    dataLabels: {
-                        enabled: true,
-                    },
-                }
-            },
-            series: [{
-                name: strName,
-                data: aCount
-            }]
-        });
-    }
     //每隔5s显示一次数据。
     $(function () {
-        setInterval("refreshTopN()", 5000);
-        showData("pic01", "line", "排名前10的数据展示", "时间：" + strTime, strName, strValue);
+//        setInterval("refreshTopN()", 5000);
+        setInterval("updateDiagram('pic01', 'line', '排名前10的数据展示', nameValue,refreshTopN())", 5000);
+//        showData("pic01");
         // showData("pic02","line","排名前10的数据展示","时间：" + strTime,strName,strValue);
-        showData("container", "column", "排名大于10的数据展示", "时间：" + strTime, strName, strValue);
-        showData("pic03", "line", "排名前10的数据展示", "时间：" + strTime, strName, strValue);
-    });
+//        showData("container", "column", "排名大于10的数据展示", nameValue);
+//        showData("pic03", "line", "排名前10的数据展示", nameValue);
+    })
 </script>
 </body>
 </html>

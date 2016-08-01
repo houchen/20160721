@@ -202,7 +202,7 @@ class rankQuery
 
         $this->use(UnionDB);
         if ($byScore) {
-            $ranks = $this->_redisConn->zRevRangeByScore($name, $start, $stop, $withScores);
+            $ranks = $this->_redisConn->zRevRangeByScore($name, $start, $stop, array('withscore' => $withScores));
         } else {
             $ranks = $this->_redisConn->zRevRange($nameID, $start, $stop, $withScores);
         }
@@ -269,7 +269,7 @@ class rankQuery
         return $ranks;
     }
 
-    public function queryRankByTimeInterval2($name, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false)
+    public function queryRankByTimeInterval2($name, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
     {
         $this->use(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);
@@ -286,13 +286,16 @@ class rankQuery
         $this->_redisConn->move($mergedKey, UnionDB);
 
         $this->use(UnionDB);
-        $ranks = $this->_redisConn->zRevRange($mergedKey, 0, -1, $withScores);
+        $ranks = $this->_redisConn->zRevRange($mergedKey, 0, $count, $withScores);
+
+        $this->_redisConn->del($mergedKey);
 
         if ($withTime == true) {
-            $this->associateRankTime($nameID, $ranks, $withScores);
+            return $this->associateRankTime($nameID, $ranks, $withScores);
+        } else {
+            return $ranks;
         }
-        $this->_redisConn->del($mergedKey);
-        return $ranks;
+
     }
 
     // name redis匹配
