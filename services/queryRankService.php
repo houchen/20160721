@@ -60,7 +60,11 @@ class rankQuery
 
     private function use ($db)
     {
-        $this->_redisConn->select($db);
+        static $currDB = 0;
+        if ($currDB != $db) {
+            $this->_redisConn->select($db);
+            $currDB = $db;
+        }
     }
 
     private function getNameID($name)
@@ -134,16 +138,18 @@ class rankQuery
         //更新分时段排名
         $this->use(RankDB);
         foreach ($rank->rank as $key => $score) {
-            $this->_redisConn->zIncrBy($logID, $score, $key);
+            //todo:
+//            $this->_redisConn->zIncrBy($logID, $score, $key);
         }
 
         $this->use(LatestUpdateDB);
-        foreach ($rank->rank as $key => $score) {
-            $lastTime = $this->_redisConn->hGet($nameID, $key);
-            if ($lastTime == false || $lastTime < $time) {
-                $this->_redisConn->hSet($nameID, $key, $time);
-            }
-        }
+        //todo:
+//        foreach ($rank->rank as $key => $score) {
+//            $lastTime = $this->_redisConn->hGet($nameID, $key);
+//            if ($lastTime == false || $lastTime < $time) {
+//                $this->_redisConn->hSet($nameID, $key, $time);
+//            }
+//        }
         return status::OK;
     }
 
@@ -193,16 +199,23 @@ class rankQuery
             }
         }
     }
-
-    public function queryRankByName2($name, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
+    public function queryRankByNamePattern($namePattern = '*', $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
     {
-        $this->use(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false) return null;//not exist
+        $nameIDs = $this->getNameIDList($namePattern, 100);
+        $i = 0;
+        $rankArr = null;
+        foreach ($nameIDs as $name => $id) {
+            $rank = $this->queryRankByID($id, $start, $stop, $withScores, $withTime, $byScore);
+            $rankArr[$i++] = array('name' => $name, 'rank' => $rank);
+        }
+        return $rankArr;
+    }
 
+    public function queryRankByID($nameID, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
+    {
         $this->use(UnionDB);
         if ($byScore) {
-            $ranks = $this->_redisConn->zRevRangeByScore($name, $start, $stop, array('withscore' => $withScores));
+            $ranks = $this->_redisConn->zRevRangeByScore($nameID, $start, $stop, array('withscore' => $withScores));
         } else {
             $ranks = $this->_redisConn->zRevRange($nameID, $start, $stop, $withScores);
         }
@@ -211,6 +224,18 @@ class rankQuery
         } else {
             return $this->associateRankTime($nameID, $ranks, $withScores);
         }
+    }
+
+    public function queryRankByName2($name, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
+    {
+        $this->use(InfoDB);
+        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
+        if ($nameID == false) return null;//not exist
+
+        $this->use(InfoDB);
+        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
+        if ($nameID == false) return null;//not exist
+        return $this->queryRankByID($nameID, $start, $stop, $withScores, $withTime, $byScore);
     }
 
     public function queryRankByName($name, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
@@ -288,14 +313,11 @@ class rankQuery
         $this->use(UnionDB);
         $ranks = $this->_redisConn->zRevRange($mergedKey, 0, $count, $withScores);
 
-        $this->_redisConn->del($mergedKey);
-
         if ($withTime == true) {
             return $this->associateRankTime($nameID, $ranks, $withScores);
         } else {
             return $ranks;
         }
-
     }
 
     // name redis匹配
@@ -384,7 +406,7 @@ class rankQuery
         return $deleted;
     }
 
-    public function getNameList($namePattern = '*', $count = 100)
+    public function getNameIDList($namePattern = '*', $count = 100)
     {
         $this->use(InfoDB);
 
@@ -405,10 +427,17 @@ class rankQuery
         if ($names == false) {
             $names = null;
         }
-        return array_keys($names);
+        return $names;
     }
 
-    public function queryTimeRangeByName($name)
+    public
+    function getNameList($namePattern = '*', $count = 100)
+    {
+        return array_keys($this->getNameIDList($namePattern, $count));
+    }
+
+    public
+    function queryTimeRangeByName($name)
     {
         $this->_redisConn->select(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);

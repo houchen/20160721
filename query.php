@@ -35,6 +35,15 @@ switch ($queryMethod) {
         $json->time = time();
         echo json_encode($json);
         break;
+    case 'queryRankByNamePattern':
+        $ranks = $query->queryRankByNamePattern($queryPara->name,
+            $queryPara->start,
+            $queryPara->stop,
+            $queryPara->withScores,
+            $queryPara->withTime,
+            $queryPara->byScore);
+        echo json_encode($ranks);
+        break;
     case 'queryRankByTimeInterval':
         $Rank = $query->queryRankByTimeInterval2($queryPara->name,
             $queryPara->start,
