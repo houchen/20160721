@@ -3,6 +3,7 @@ header('Content-type:text/json');
 require_once('model/IPRank.php');
 require_once('services/queryRankService.php');
 $ipData = new IPRank();
+$_POST['data']=preg_replace( '/[\x00-\x1F]/','',$_POST['data']);
 $ipData->set(json_decode($_POST['data']));
 $queryClient = new rankQuery();
 try {

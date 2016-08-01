@@ -1,4 +1,5 @@
-words=[
+# encoding=utf-8
+words = [
     "people",
     "history",
     "way",
@@ -1524,4 +1525,38 @@ words=[
     "wake",
     "wrap",
     "yesterday"
+]
+ua = [
+    u"IE6 	Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)	 ",
+    u"IE7 	Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)	 ",
+    u"IE8 	Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0)	 ",
+    u"IE9 	Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)",
+    u"IE10 	Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)	 ",
+    u"Firefox 3.6 	Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9.2.28) Gecko/20120306 Firefox/3.6.28	 ",
+    u"Firefox 4.0 	Mozilla/5.0 (Windows NT 5.1; rv:2.0) Gecko/20100101 Firefox/4.0	 ",
+    u"Firefox 10.0 esr 	Mozilla/5.0 (Windows NT 6.1; rv:10.0.8) Gecko/20100101 Firefox/10.0.8	 ",
+    u"Firefox 17.0 esr 	Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0 	 ",
+    u"Firefox 20.0	Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0	 ",
+    u"Firefox 20.0 ( ubuntu ) 	Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:20.0) Gecko/20100101 Firefox/20.0	 ",
+    u"Chrome 17 	Mozilla/5.0 (Windows NT 5.1) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.33 Safari/535.11	 ",
+    u"Chrome 18 	Mozilla/5.0 (Windows NT 5.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.142 Safari/535.19	 ",
+    u"Chrome 26 	Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.64 Safari/537.31	 ",
+    u"Chrome 26 ( ubuntu ) 	Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.63 Safari/537.31	 ",
+    u"Maxthon 1.6.7(build 35) 	Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Maxthon)	 ",
+    u"Maxthon 2.5.18.1000 	Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; Maxthon 2.0)	 ",
+    u"Maxthon 3.5.2.1000 	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.1 (KHTML, like Gecko) Maxthon/3.0 Chrome/22.0.1229.79 Safari/537.1	 ",
+    u"Maxthon 4.0.5.4000 (遨游云浏览器) 	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.1 (KHTML, like Gecko) Maxthon/4.0.5.4000 Chrome/26.0.1410.43 Safari/537.1	 ",
+    u"世界之窗 3.6.1.0 	Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; qihu theworld)	 ",
+    u"世界之窗极速版 4.3.0.102 	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.79 Safari/535.11 QIHU THEWORLD	 ",
+    u"世界之窗 5.0beta(5.0.0.1) 	Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)",
+    u"腾讯TT 3.8.308.201 	Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; TencentTraveler )	 ",
+    u"腾讯TT 4.8(1000) 	Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0)",
+    u"QQ浏览器6.14(15943) 	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/536.7 (KHTML, like Gecko) Chrome/20.0.1099.0 Safari/536.7 QQBrowser/6.14.15493.201	 ",
+    u"QQ浏览器7.3.8581.400	兼容模式：Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; .NET4.0E; QQBrowser/7.3.8581.400) ",
+    u"标准模式：Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)",
+    u"搜狗高速浏览器3.2.0.4262	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.802.30 Safari/535.1 SE 2.X MetaSr 1.0	 ",
+    u"搜狗高速浏览器4.1.1.7598	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.57 Safari/537.17 SE 2.X MetaSr 1.0	 ",
+    u"猎豹安全浏览器 3.3.17.4147 	Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.92 Safari/537.1 LBBROWSER	 ",
+    u"Opera 12.15 	Opera/9.80 (Windows NT 6.1) Presto/2.12.388 Version/12.15	 ",
+    u"Opera 12.15 ( ubuntu )	Opera/9.80 (X11; Linux x86_64) Presto/2.12.388 Version/12.15"
 ]

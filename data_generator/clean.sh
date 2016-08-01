@@ -1,2 +1,2 @@
 #!/bin/sh
-rm -fr mail* www* bbs*
+rm -fr mail* www* bbs* weblist.txt

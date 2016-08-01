@@ -3,8 +3,10 @@ import random
 from randomIP import getRandomIP
 import urllib, urllib2, json, requests
 from urllib import urlencode
-from word import words
-
+from word import words,ua
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 websitprefix = ['www.', 'mail.', 'bbs.']
 websitpsuffix = ['.com', '.cn', '.org']
 
@@ -30,6 +32,7 @@ def datetime_timestamp(dt):
     # 将"2012-03-28 06:53:40"转化为时间戳
     s = time.mktime(time.strptime(dt, '%Y-%m-%d %H:%M:%S'))
     return int(s)
+
 
 data_time = time.time()
 
@@ -64,12 +67,22 @@ for i in range(1, 100):
         randomtime = data_time + random.randint(-604800, 0)
         rank_str = ''
         for ip in range(random.randint(10, 40)):  # 生成随机时间内的ip
-            rank_str += '    "' +getRandomIP(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
+            rank_str += '    "' + getRandomIP(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
         rank_str = rank_str[:-2] + '\n'
-        json = '{"name":"' + randomweb + '",\n"time":' + str(
+        json = '{"name":"' + randomweb + ':ip",\n"time":' + str(
             randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
         addip(json)
         webdata.write(json)
     webdata.close()
+
+    for k in range(1, random.randint(2, 10)):  # 给这些网站生成随机的时间内的数据
+        randomtime = data_time + random.randint(-604800, 0)
+        rank_str = ''
+        for ip in range(random.randint(10, 40)):  # 生成随机时间内的ip
+            rank_str += '    "' + random.choice(ua) + '":' + str(random.randint(100, 5000)) + ',\n'
+        rank_str = rank_str[:-2] + '\n'
+        json = '{"name":"' + randomweb + ':ua",\n"time":' + str(
+            randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
+        addip(json)
     # f2.flush()
 weblist.close()

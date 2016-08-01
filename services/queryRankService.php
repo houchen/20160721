@@ -10,10 +10,9 @@ require_once('redisConfig.php');
 require_once('model/status.php');
 
 //keys,discarded
-//define('LastestUpdateKey', 'LASTEST_TIME_TABLE');
 define('NameSetKey', 'NAME_SET');
-define('TMPZUnionKey', 'TMP_UNION_KEY');
-define('TimestampKey', 'TIMESTAPM_SET');
+define('TMPZUnionKey', 'tmpUnion:set');
+define('TimestampKey', 'timestamp:set');
 
 
 //dbs
@@ -24,9 +23,9 @@ define('UnionDB', 3);
 define('LatestUpdateDB', 4);
 
 //keys
-define('nameIDKey', 'NAME_ID_TABLE');//name与id对应关系的哈希表key,该key在InfoDB中
-define('nameCounter', 'NAME_COUNTER');//生成name对应id的计数器
-define('logCounter', 'LOG_COUNTER');
+define('nameIDKey', 'id:hash');//name与id对应关系的哈希表key,该key在InfoDB中
+define('nameCounter', 'name:counter');//生成name对应id的计数器
+define('logCounter', 'log:counter');
 
 define('LOG_PATH', '/Users/houchen/php.log');
 
@@ -95,6 +94,7 @@ class rankQuery
 
     private function associateRankTime($nameID, &$ranks, $withScore)
     {
+        throw new Exception('not implement:associateRankTime');
         $ranksAndTime = array();
         $this->use(LatestUpdateDB);
         if ($withScore) {
@@ -139,7 +139,7 @@ class rankQuery
         $this->use(RankDB);
         foreach ($rank->rank as $key => $score) {
             //todo:
-//            $this->_redisConn->zIncrBy($logID, $score, $key);
+            $this->_redisConn->zIncrBy($logID, $score, $key);
         }
 
         $this->use(LatestUpdateDB);
@@ -300,29 +300,29 @@ class rankQuery
         if ($nameID == false || $stopTimestamp < $startTimestamp) {
             return null;
         }
-
         $this->use(TimeDB);
-        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp);
+        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp, array('withscores' => false));
 
-        $this->use(RankDB);
-        $mergedKey = $nameID . '-' . strval($startTimestamp) . '-' . strval($stopTimestamp);
-        $this->_redisConn->zUnion($mergedKey, $logIDs);
-        $this->_redisConn->move($mergedKey, UnionDB);
-
+        $mergedKey = $nameID . '-' . $logIDs[0] . '-' . end($logIDs);
+        $this->use(UnionDB);
+        if (!$this->_redisConn->exists($mergedKey)) {
+            $this->use(RankDB);
+            $this->_redisConn->zUnion($mergedKey, $logIDs);
+            $this->_redisConn->move($mergedKey, UnionDB);
+        }
         $this->use(UnionDB);
         $ranks = $this->_redisConn->zRevRange($mergedKey, 0, -1, $withScores);
 
         if ($withTime == true) {
             $this->associateRankTime($nameID, $ranks, $withScores);
         }
-        $this->_redisConn->del($mergedKey);
         return $ranks;
     }
 
 // name redis匹配
-    public
     function queryRankByTimeInterval($name, $startTime, $stopTime, $withScore = false)
     {
+        $this->_redisConn->select(InfoDB);
         $this->_redisConn->select(InfoDB);
         $name_id = $this->_redisConn->hGet(nameIDKey, $name);
         if ($name_id == false) {

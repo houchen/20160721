@@ -6,8 +6,6 @@
     <script src="static/js/jquery.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>   
     <script type="text/javascript" src="jeDate/jedate.js"></script>
-    <link rel="stylesheet" href="jqpagination.css"/>
-    <script src="static/js/jquery.jqpagination.min.js"></script>
     <title>try echarts</title>
     <style type="text/css">
         select {
@@ -19,6 +17,9 @@
             padding-right: 14px;
         }
 
+        select::-ms-expand {
+            display: none;
+        }
 
         .nameList {
             width: 300px;
@@ -188,13 +189,6 @@
         <input id="showCountInput" class="inputName" value="10"/><br>
     </div>
 </div>
-<div class="pagination" style="float:left;margin-left:500px;margin-top:-40px;">
-    <a href="#" class="first" data-action="first">&laquo;</a>
-    <a href="#" class="previous" data-action="previous">&lsaquo;</a>
-    <input type="text" readonly="readonly" data-max-page="40" />
-    <a href="#" class="next" data-action="next">&rsaquo;</a>
-    <a href="#" class="last" data-action="last">&raquo;</a>
-</div>
 <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
 <div id="diagramCanvas" class="diagramCanvas"></div>
 </body>
@@ -206,7 +200,7 @@
         isTime:false, //isClear:false,
         minDate:"2015-10-19 00:00:00",
         maxDate:"2016-11-8 00:00:00"
-    });
+    })
     jeDate({
         dateCell:"#dateinfo",
         format:"YYYY年MM月DD日 hh:mm:ss",
@@ -214,16 +208,7 @@
         isTime:true, //isClear:false,
         minDate:"2014-09-19 00:00:00",
         okfun:function(val){alert(val)}
-    });
-     $('.pagination').jqPagination({
-      link_string : '/?page={page_number}',
-      current_page: 5, //设置当前页 默认为1
-      max_page : 40, //设置最大页 默认为1
-      page_string : '当前第{current_page}页,共{max_page}页',
-      paged : function(page) {
-          //回发事件。。。
-          }
-  });
+    })
 </script>
 <script type="text/javascript">
     optionTemplate = {
@@ -477,5 +462,110 @@
         }
     });
 
+    var allTop10Posting = $.post('query.php?method=queryRankByNamePattern', {
+        'data': JSON.stringify(
+                {
+                    name: 'www*',
+                    byScore: false,
+                    start: 0,
+                    stop: 10,
+                    withTime: false,
+                    withScores: true
+                }
+        )
+    });
+
+    allTop10Posting.done(function (ranks) {
+//        document.write(ranks);
+    });
+    var myChart = echarts.init(document.getElementById('main'));
+    var myChartArr = [];
+    for (var i = 0; i < 8; i++) {
+        myChartArr.push(echarts.init(document.getElementById('main' + (i + 1))));
+    }
+    var legends = [];
+    var category = [];
+    var series = [];
+    var category2 = [];
+    var series2 = [];
+    myChart.showLoading();
+
+    var optionArr = [];
+    myChart.setOption(option);
+    for (var i = 0; i < 8; i++) {
+//        optionArr.push($.extend({},option));
+        optionArr.push(JSON.parse(JSON.stringify(option)));
+        myChartArr[i].setOption(optionArr[i]);
+    }
+    //    option.series[1].name ='2';
+
+
+    function updateDiagram() {
+        var posting = $.post('query.php?method=queryRankByName', {
+            'data': JSON.stringify({
+                name: 'bbs.feel.cn',
+                byScore: false,
+                start: 0,
+                stop: 100,
+                withTime: false,
+                withScores: true
+            })
+        });
+        var posting2 = $.post('query.php?method=queryRankByName', {
+            'data': JSON.stringify({
+                name: 'bbs.serve.com',
+                byScore: false,
+                start: 0,
+                stop: 100,
+                withTime: false,
+                withScores: true
+            })
+        });
+        posting.done(function (rankData) {
+            category = [];
+            series = [];
+
+            for (var ip in rankData.rank) {
+                category.unshift(ip);
+                series.unshift(rankData.rank[ip]);
+            }
+            option.xAxis[0].data = category;
+            option.series[0].data = series;
+            myChart.setOption(option);
+        });
+        posting2.done(function (rankData) {
+            category2 = [];
+            series2 = [];
+            for (var ip in rankData.rank) {
+                category2.unshift(ip);
+                series2.unshift(rankData.rank[ip]);
+            }
+            myChart.hideLoading();
+            option.xAxis[1].data = category2;
+            option.series[1].data = series2;
+            for (var i = 0; i < 8; i++) {
+                optionArr[i].series[0].data = series2;
+                optionArr[i].xAxis[1].data = category2;
+                myChartArr[i].setOption(optionArr[i]);
+            }
+            myChart.setOption(option);
+        })
+    }
+    var updateTimer;
+    $(function () {
+//        updateTimer = setInterval('updateDiagram()', 2000);
+    });
+    var status = "started";
+    function stopUpdate() {
+        if (status == 'started') {
+            clearInterval(updateTimer);
+            status = 'stoped';
+            $('#stop').html('开始刷新')
+        } else if (status == 'stoped') {
+            updateTimer = setInterval('updateDiagram()', 2000);
+            status = 'started';
+            $('#stop').html('暂停刷新')
+        }
+    }
 </script>
 </html>
