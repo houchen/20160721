@@ -153,56 +153,10 @@ class rankQuery
         return status::OK;
     }
 
-    public function addIPRank(IPRank $ipRank)
-    {
-        //基本信息和id生成
-        $this->_redisConn->select(InfoDB);
-        $name_exist = $this->_redisConn->hGet(nameIDKey, $ipRank->name);
-        if ($name_exist == false) {
-            $nameID = $this->_redisConn->incr(nameCounter);
-            $this->_redisConn->hSetNx(nameIDKey, $ipRank->name, $nameID);
-            $this->_redisConn->hSet(LatestUpdateDB, $ipRank->name, $ipRank->createTime);
-        } else {
-            $nameID = $name_exist;
-//            $time=$this->redisConn->hGet(latestUpdateKey,$ipRank->name);
-//            if($time!=false&& $time<$ipRank->createTime){
-//                $this->redisConn->hSet(latestUpdateKey,$ipRank->name,$ipRank->createTime);
-//            }else{
-//                //error,存在id,但是不存在最后一次更新时间
-//            }
-        }
-
-        $logID = $this->_redisConn->incr(logCounter);
-
-        //校验时间是不是存在
-        //保存时间点信息
-        $this->_redisConn->select(TimeDB);
-        $this->_redisConn->zAdd($nameID, $ipRank->createTime, $logID);
-        //保存该时间信息的排名信息
-        $rank = $ipRank->Rank;
-        $this->_redisConn->select(RankDB);
-        foreach ($rank as $ip => $score) {
-//            $IPlong = ip2long($ip);
-            $this->_redisConn->zIncrBy($logID, $score, $ip);
-        }
-        $this->_redisConn->select(UnionDB);
-        foreach ($rank as $ip => $score) {
-            $this->_redisConn->zIncrBy($nameID, $score, $ip);
-        }
-        //在此union?
-
-        $this->_redisConn->select(LatestUpdateDB);
-        foreach ($rank as $ip => $score) {
-            $lastTime = $this->_redisConn->hGet($nameID, $ip);
-            if ($lastTime == false || $lastTime < $ipRank->createTime) {
-                $this->_redisConn->hSet($nameID, $ip, $ipRank->createTime);
-            }
-        }
-    }
-
     public function queryRankByNamePattern($namePattern = '*', $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
     {
         $nameIDs = $this->getNameIDList($namePattern, 100);
+        if ($nameIDs == null) return null;
         $i = 0;
         $rankArr = null;
         foreach ($nameIDs as $name => $id) {
@@ -292,18 +246,12 @@ class rankQuery
         return $ranks;
     }
 
-    public
-    function queryRankByTimeInterval2($name, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false)
+    public function queryTimeIntervalRankByID($nameID, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
     {
-        $this->use(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false || $stopTimestamp < $startTimestamp) {
-            return null;
-        }
         $this->use(TimeDB);
         $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp, array('withscores' => false));
 
-        $mergedKey = $nameID . '-' . $logIDs[0] . '-' . end($logIDs);
+        $mergedKey = $nameID . ':' . $logIDs[0] . ':' . end($logIDs);
         $this->use(UnionDB);
         if (!$this->_redisConn->exists($mergedKey)) {
             $this->use(RankDB);
@@ -311,6 +259,38 @@ class rankQuery
             $this->_redisConn->move($mergedKey, UnionDB);
         }
         $this->use(UnionDB);
+        $this->_redisConn->expire($mergedKey, 900);//15分钟过期
+        $ranks = $this->_redisConn->zRevRange($mergedKey, 0, -1, $withScores);
+
+        if ($withTime == true) {
+            $this->associateRankTime($nameID, $ranks, $withScores);
+        }
+        return $ranks;
+    }
+
+    public function queryRankByTimeInterval2($namePattern, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
+    {
+        $nameIDs = $this->getNameIDList($namePattern, 100);
+        if ($nameIDs == null) return null;
+
+
+        $this->use(InfoDB);
+        $nameID = $this->_redisConn->hGet(nameIDKey, $namePattern);
+        if ($nameID == false || $stopTimestamp < $startTimestamp) {
+            return null;
+        }
+        $this->use(TimeDB);
+        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp, array('withscores' => false));
+
+        $mergedKey = $nameID . ':' . $logIDs[0] . ':' . end($logIDs);
+        $this->use(UnionDB);
+        if (!$this->_redisConn->exists($mergedKey)) {
+            $this->use(RankDB);
+            $this->_redisConn->zUnion($mergedKey, $logIDs);
+            $this->_redisConn->move($mergedKey, UnionDB);
+        }
+        $this->use(UnionDB);
+        $this->_redisConn->expire($mergedKey, 900);//15分钟过期
         $ranks = $this->_redisConn->zRevRange($mergedKey, 0, -1, $withScores);
 
         if ($withTime == true) {

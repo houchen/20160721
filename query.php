@@ -49,7 +49,8 @@ switch ($queryMethod) {
             $queryPara->start,
             $queryPara->stop,
             $queryPara->withScores,
-            $queryPara->withTime);
+            $queryPara->withTime,
+            $queryPara->count);
         echo json_encode($Rank);
         break;
     case 'getNameList':

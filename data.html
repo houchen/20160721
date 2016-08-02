@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <script src="static/js/echarts.js"></script>
     <script src="static/js/jquery.min.js"></script>
-    <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>   
+    <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
     <script type="text/javascript" src="jeDate/jedate.js"></script>
     <link rel="stylesheet" href="jqpagination.css"/>
     <script src="static/js/jquery.jqpagination.min.js"></script>
@@ -18,7 +18,6 @@
             background: url("http://ourjs.github.io/static/2015/arrow.png") no-repeat scroll right center transparent;
             padding-right: 14px;
         }
-
 
         .nameList {
             width: 300px;
@@ -91,7 +90,7 @@
             display: inline-block;
             margin-top: 5px;
             float: left;
-            color:black;
+            color: black;
             font-size: 14px;
         }
 
@@ -161,8 +160,16 @@
             display: inline-block;
             color: white;
         }
-        .datainp{ width:200px; height:30px; border:1px #ccc solid;}
-        .datep{ margin-bottom:40px;}
+
+        .datainp {
+            width: 200px;
+            height: 30px;
+            border: 1px #ccc solid;
+        }
+
+        .datep {
+            margin-bottom: 40px;
+        }
 
     </style>
 </head>
@@ -171,7 +178,8 @@
 <div style="display:inline-block;float:left;margin-top:10px;margin-left:30px;">
     <p class="datep" style="display:none;"><input class="datainp" id="indate" type="text">
     </p>
-    <p class="datep"><input  style="width:268px;text-align:center;" class="datainp" id="dateinfo" type="text" placeholder="请选择"  readonly></p>
+    <p class="datep"><input style="width:268px;text-align:center;" class="datainp" id="dateinfo" type="text"
+                            placeholder="请选择" readonly></p>
 </div>
 <div class="title">当前排名</div>
 <div class="header">
@@ -191,7 +199,7 @@
 <div class="pagination" style="float:left;margin-left:500px;margin-top:-40px;">
     <a href="#" class="first" data-action="first">&laquo;</a>
     <a href="#" class="previous" data-action="previous">&lsaquo;</a>
-    <input type="text" readonly="readonly" data-max-page="40" />
+    <input type="text" readonly="readonly" data-max-page="40"/>
     <a href="#" class="next" data-action="next">&rsaquo;</a>
     <a href="#" class="last" data-action="last">&raquo;</a>
 </div>
@@ -201,29 +209,31 @@
 <script type="text/javascript">
     //jeDate.skin('gray');
     jeDate({
-        dateCell:"#indate",//isinitVal:true,
-        format:"YYYY-MM",
-        isTime:false, //isClear:false,
-        minDate:"2015-10-19 00:00:00",
-        maxDate:"2016-11-8 00:00:00"
+        dateCell: "#indate",//isinitVal:true,
+        format: "YYYY-MM",
+        isTime: false, //isClear:false,
+        minDate: "2015-10-19 00:00:00",
+        maxDate: "2016-11-8 00:00:00"
     });
     jeDate({
-        dateCell:"#dateinfo",
-        format:"YYYY年MM月DD日 hh:mm:ss",
-        isinitVal:true,
-        isTime:true, //isClear:false,
-        minDate:"2014-09-19 00:00:00",
-        okfun:function(val){alert(val)}
+        dateCell: "#dateinfo",
+        format: "YYYY年MM月DD日 hh:mm:ss",
+        isinitVal: true,
+        isTime: true, //isClear:false,
+        minDate: "2014-09-19 00:00:00",
+        okfun: function (val) {
+            alert(val)
+        }
     });
-     $('.pagination').jqPagination({
-      link_string : '/?page={page_number}',
-      current_page: 5, //设置当前页 默认为1
-      max_page : 40, //设置最大页 默认为1
-      page_string : '当前第{current_page}页,共{max_page}页',
-      paged : function(page) {
-          //回发事件。。。
-          }
-  });
+    $('.pagination').jqPagination({
+        link_string: '/?page={page_number}',
+        current_page: 5, //设置当前页 默认为1
+        max_page: 40, //设置最大页 默认为1
+        page_string: '当前第{current_page}页,共{max_page}页',
+        paged: function (page) {
+            //回发事件。。。
+        }
+    });
 </script>
 <script type="text/javascript">
     optionTemplate = {
@@ -248,8 +258,8 @@
         legend: {
             data: ['-'],
             itemGap: 5,
-            textStyle:{
-                color:'white'
+            textStyle: {
+                color: 'white'
             }
         },
         grid: {
@@ -312,112 +322,6 @@
             }
         ]
     };
-    option = {
-        backgroundColor: 'black',
-        textStyle: {
-            color: 'rgba(255, 255, 255, 1)'
-        },
-        tooltip: {
-            trigger: 'item'
-        },
-        title: {
-            text: '-',
-            textStyle: {
-                fontWeight: 'normal',
-                color: 'white'
-            }
-        },
-        toolbox: {
-            show: true,
-            feature: {
-                mark: {show: true},
-                dataView: {show: true, readOnly: false},
-                magicType: {show: true, type: ['line', 'bar', 'pie']},
-                restore: {show: true},
-                saveAsImage: {show: true},
-                dataZoom: {show: true}
-            }
-        },
-        calculable: true,
-        legend: {
-            data: ['1', '2'],
-            itemGap: 5
-        },
-        grid: {
-            top: '12%',
-            left: '1%',
-            right: '10%',
-            containLabel: true
-        },
-        xAxis: [
-            {
-                name: '1',
-                type: 'category',
-                data: [],
-                "axisLabel": {
-                    interval: 'auto',
-                    margin: 1
-                },
-                position: 'top'
-            },
-            {
-                name: '2',
-                type: 'category',
-                data: [],
-                "axisLabel": {
-                    interval: 'auto',
-                    margin: 1
-                }
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value',
-                name: 'score(万)',
-                axisLabel: {
-                    formatter: function (a) {
-                        a = +a;
-                        return isFinite(a)
-                                ? echarts.format.addCommas(+a / 10000)
-                                : '';
-                    }
-                }
-            }
-        ],
-        dataZoom: [
-            {
-                show: true,
-                start: 30,
-                end: 100
-            },
-            {
-                type: 'inside',
-                start: 94,
-                end: 100
-            },
-            {
-                show: true,
-                yAxisIndex: 0,
-                filterMode: 'empty',
-                height: '80%',
-                width: 15,
-                showDataShadow: false,
-                left: '93%'
-            }
-        ],
-        series: [
-            {
-                name: '1',
-                type: 'bar',
-                data: []
-            },
-            {
-                name: '2',
-                type: 'bar',
-                data: []
-            }
-        ]
-    };
 
     var previousDiagram = [];
     function addDiagram(rankWithName) {
@@ -452,7 +356,7 @@
             })
         });
         topNPosting.done(function (ranks) {
-            $('#main0').empty();
+            $('#diagramCanvas').empty();
             while (previousDiagram.length > 0) {
                 previousDiagram.pop().dispose();
             }
