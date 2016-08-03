@@ -100,8 +100,8 @@
 
         var query_param_by_timeinterval = {
             'name': 'foo_name',
-            start: 12312,
-            stop: 1232333,
+            start:0,
+            stop:0,
             withScores: true,
             withTime: false
         };
@@ -112,6 +112,7 @@
             query_param_by_timeinterval['name'] = $('#name').val();
             query_param_by_timeinterval.start = $('#start').val();
             query_param_by_timeinterval.stop = $('#stop').val();
+            query_param_by_timeinterval.count=$('#queryCount').val();
             $.ajax({
                 url: 'query.php?method=queryRankByTimeInterval',
                 type: 'post',

@@ -2,12 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script src="static/js/echarts.js"></script>
-    <script src="static/js/jquery.min.js"></script>
-    <script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
-    <script type="text/javascript" src="jeDate/jedate.js"></script>
-    <link rel="stylesheet" href="jqpagination.css"/>
-    <script src="static/js/jquery.jqpagination.min.js"></script>
     <title>try echarts</title>
     <style type="text/css">
         select {
@@ -19,18 +13,10 @@
             padding-right: 14px;
         }
 
-        .nameList {
-            width: 300px;
-            border: 1px solid red;
-            padding: 10px;
-            background: green;
-            margin: 0 auto;
-        }
-
         .diagramCanvas {
             /*width: 1040px;*/
             width: 100%;
-            height: auto;
+            /*height: auto;*/
             /*border: 1px solid red;*/
             padding-right: 20px;
             display: inline-block;
@@ -53,24 +39,6 @@
             font-size: 40px;
             font-family: "微软雅黑";
             /*color: red;*/
-        }
-
-        .stopBtn {
-            display: inline-block;
-            float: left;
-            margin-left: 50px;
-            margin-top: 15px;
-            width: 80px;
-            line-height: 30px;
-            text-align: center;
-            height: 30px;
-            font-size: 16px;
-            border-radius: 4px;
-            background: red;
-        }
-
-        .stopBtn:hover {
-            cursor: pointer;
         }
 
         .div01 {
@@ -132,13 +100,9 @@
             font-size: 14px;
         }
 
-        .mt5 {
-            margin-top: 5px;
-        }
-
         .diagram {
             width: 48%;
-            height: 350px;
+            /*height: 350px;*/
             margin: 0px 0px 0px 10px;
             float: left;
         }
@@ -171,23 +135,52 @@
             margin-bottom: 40px;
         }
 
+        .pageWrap {
+            width: 200px;
+            height: 40px;
+            margin: 0 auto;
+        }
+
+        .pageBtn {
+            width: 80px;
+            display: inline-block;
+            float: left;
+            margin-left: 10px;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 40px;
+            background: red;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .pageBtn:hover {
+            cursor: pointer;
+        }
+
     </style>
 </head>
 
 <body>
 <div style="display:inline-block;float:left;margin-top:10px;margin-left:30px;">
-    <p class="datep" style="display:none;"><input class="datainp" id="indate" type="text">
+    <p class="datep" style="display:none;"><input class="datainp" id="startTime" type="text" value="0"></p>
+    <p class="datep" style="display:none;"><input class="datainp" id="stopTime" type="text" value="0"></p>
+    <p class="datep">
+        <input style="width:268px;text-align:center;" class="datainp" id="startTimeBtn" type="text" placeholder="选择开始时间"
+               readonly>
     </p>
-    <p class="datep"><input style="width:268px;text-align:center;" class="datainp" id="dateinfo" type="text"
-                            placeholder="请选择" readonly></p>
+    <p class="datep">
+        <input style="width:268px;text-align:center;" class="datainp" id="stopTimeBtn" type="text" placeholder="选择结束时间"
+               readonly>
+    </p>
 </div>
 <div class="title">当前排名</div>
 <div class="header">
-    <div id="stop" class="stopBtn" onclick="stopUpdate()">暂停刷新</div>
     <div class="div01">
         <input id="inputName" placeholder="输入过滤条件" class="inputName" style="width: 92px;"/>
         <select id="nameDropList" class="sctShow"></select>
-        <div class="addBtn" onclick="downloadRank()">查找</div>
+        <!--在这里填入你要下个页面显示多少个图-->
+        <div id="search" class="addBtn">查找</div>
         <div class="addBtn">删除</div>
     </div>
     <!--  </div> -->
@@ -196,46 +189,60 @@
         <input id="showCountInput" class="inputName" value="10"/><br>
     </div>
 </div>
-<div class="pagination" style="float:left;margin-left:500px;margin-top:-40px;">
-    <a href="#" class="first" data-action="first">&laquo;</a>
-    <a href="#" class="previous" data-action="previous">&lsaquo;</a>
-    <input type="text" readonly="readonly" data-max-page="40"/>
-    <a href="#" class="next" data-action="next">&rsaquo;</a>
-    <a href="#" class="last" data-action="last">&raquo;</a>
+<div class="pageWrap">
+    <div id="upPage" class="pageBtn">上一页</div>
+    <div id="downPage" class="pageBtn">下一页</div>
 </div>
+
 <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
 <div id="diagramCanvas" class="diagramCanvas"></div>
 </body>
+<script src="static/js/echarts.js"></script>
+<script src="static/js/jquery.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
+<script type="text/javascript" src="static/jedate/jedate.js"></script>
 <script type="text/javascript">
     //jeDate.skin('gray');
+    var pageCount = 6;
+    var screenHeight = $(window).height() - 130;
+    $("#diagramCanvas").css('height', screenHeight);
     jeDate({
-        dateCell: "#indate",//isinitVal:true,
-        format: "YYYY-MM",
-        isTime: false, //isClear:false,
-        minDate: "2015-10-19 00:00:00",
-        maxDate: "2016-11-8 00:00:00"
-    });
-    jeDate({
-        dateCell: "#dateinfo",
-        format: "YYYY年MM月DD日 hh:mm:ss",
+        dateCell: "#stopTimeBtn",
+        format: "YYYY-MM-DD hh:mm:ss",
         isinitVal: true,
         isTime: true, //isClear:false,
         minDate: "2014-09-19 00:00:00",
         okfun: function (val) {
-            alert(val)
+            $('#stopTime').val(Date.parse(val) / 1000);
+        },
+        choosefun: function (val) {
+            $('#stopTime').val(Date.parse(val) / 1000);
         }
     });
-    $('.pagination').jqPagination({
-        link_string: '/?page={page_number}',
-        current_page: 5, //设置当前页 默认为1
-        max_page: 40, //设置最大页 默认为1
-        page_string: '当前第{current_page}页,共{max_page}页',
-        paged: function (page) {
-            //回发事件。。。
+    jeDate({
+        dateCell: "#startTimeBtn",
+        format: "YYYY-MM-DD hh:mm:ss",
+        isinitVal: true,
+        isTime: true, //isClear:false,
+        minDate: "2014-09-19 00:00:00",
+        okfun: function (val) {
+            $('#startTime').val(Date.parse(val) / 1000);
+        },
+        choosefun: function (val) {
+            $('#startTime').val(Date.parse(val) / 1000);
         }
     });
-</script>
-<script type="text/javascript">
+    //上一页按钮点击事件
+    $("#upPage").on('click', function () {
+        updateDiagram.previousPage(pageCount);
+    });
+    //下一页按钮点击事件
+    $("#downPage").on('click', function () {
+        updateDiagram.nextPage(pageCount);
+    });
+    $("#search").on('click', function () {
+        downloadRank();
+    });
     optionTemplate = {
         backgroundColor: 'black',
         textStyle: {
@@ -318,24 +325,35 @@
             {
                 name: '-',
                 type: 'bar',
+                itemStyle: {
+                    normal: {
+                        color: "#00A1CB"
+                    }
+                },
                 data: []
             }
         ]
     };
 
     var previousDiagram = [];
+    var diagramCountPerPage = 4;
+    var updateDiagram;
+    optionTemplateJSON = JSON.stringify(optionTemplate);
     function addDiagram(rankWithName) {
         var name = rankWithName.name.toString();
         var scores = [];
         var keys = [];
         for (var key in rankWithName.rank) {
-            keys.unshift(key);
-            scores.unshift(rankWithName.rank[key]);
+            keys.push(key);
+            scores.push(rankWithName.rank[key]);
         }
-        $('#diagramCanvas').append('<div id="' + name + '" class="diagram"></div>');
+        var diagramHeight = Math.floor(screenHeight / 2) + 'px';
+        var diagramDiv = $("<div id=" + name + " class='diagram'></div>");
+        diagramDiv.css('height', diagramHeight);
+        $('#diagramCanvas').append(diagramDiv);
         var chart = echarts.init(document.getElementById(name));
         previousDiagram.push(chart);
-        var echartOption = JSON.parse(JSON.stringify(optionTemplate));
+        var echartOption = JSON.parse(optionTemplateJSON);
         echartOption.legend.data[0] = name;
         echartOption.series[0].name = name;
         echartOption.series[0].data = scores;
@@ -345,25 +363,66 @@
     function downloadRank() {
         var name = $('#inputName').val();
         var topN = $('#showCountInput').val();
-        var topNPosting = $.post('query.php?method=queryRankByNamePattern', {
-            'data': JSON.stringify({
-                name: name,
-                byScore: false,
-                start: 0,
-                stop: topN,
-                withTime: false,
-                withScores: true
-            })
-        });
+        var startTime = $('#startTime').val();
+        var stopTime = $('#stopTime').val();
+        var queryPara = {
+            name: name,
+            withScores: true,
+            byScore: false,
+            withTime: false
+// 该参数必须要有,指明查询起始名次,第0名最大;
+// 或者指明一个较小的过去时间,作为时间段的起始点;
+// 或者指明分数段的起始分数(仅byScore为true)
+//            start: 0,
+// 该参数指明结束名次;或指明一个较新的时间点,作为时间段的结束时间
+//            stop: topN,
+// 仅在查询方法为queryRankByTimeInterval时可用,表明每个时间段的查询结果想要多少条
+//            count:10
+        };
+        var topNPosting = {};
+        if (startTime == -1 || stopTime == -1) {
+            queryPara.start = 0;
+            queryPara.stop = topN;
+            topNPosting = $.post('query.php?method=queryRankByNamePattern', {'data': JSON.stringify(queryPara)});
+        } else {
+            queryPara.start = startTime;
+            queryPara.stop = stopTime;
+            queryPara.count = topN;
+            topNPosting = $.post('query.php?method=queryRankByTimeInterval', {'data': JSON.stringify(queryPara)});
+        }
         topNPosting.done(function (ranks) {
-            $('#diagramCanvas').empty();
-            while (previousDiagram.length > 0) {
-                previousDiagram.pop().dispose();
-            }
-            for (var rank in ranks) {
-                addDiagram(ranks[rank]);
-            }
-        })
+                    var nextRank = 0;
+                    updateDiagram = {
+                        nextPage: function (count) {
+                            if (nextRank > ranks.length)return;
+                            while (previousDiagram.length > 0) {
+                                previousDiagram.pop().dispose();
+                            }
+                            $('#diagramCanvas').empty();
+                            //todo:取消重绘canvas,只是改变他的data
+                            for (var i = 0; i < count && nextRank < ranks.length; i++) {
+                                addDiagram(ranks[nextRank++]);
+                            }
+                        },
+                        previousPage: function (count) {
+                            if (nextRank < 0)return;
+                            nextRank -= previousDiagram.length;
+                            while (previousDiagram.length > 0) {
+                                previousDiagram.pop().dispose();
+                            }
+                            $('#diagramCanvas').empty();
+                            var revertStack = [];
+                            for (var i = 0; i < count && nextRank - 1 - i >= 0; i++) {
+                                revertStack.push(nextRank - i - 1);
+                            }
+                            while (revertStack.length > 0) {
+                                addDiagram(ranks[revertStack.pop()]);
+                            }
+                        }
+                    };
+                    updateDiagram.nextPage(pageCount);
+                }
+        )
     }
 
     $.ajax({
