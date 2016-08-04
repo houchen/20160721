@@ -1,5 +1,4 @@
-.idea/
-
+.idea/*
 .idea/workspace.xml
 
 data_generator/www*
