@@ -4,6 +4,7 @@
  * User: houchen
  * Date: 7/25/16
  * Time: 4:44 PM
+ * redis union命令的速度测试,mac机器上,union两个300W的有序集合,需要大约9s
  */
 
 class runtime

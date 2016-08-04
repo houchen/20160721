@@ -1,8 +1,26 @@
+### 添加数据
+- 请求地址: add.php
+- 请求格式
+~~~javascript
+{
+   "name": "foo_name",//这个是唯一的名字,搜索时使用的名字
+   "time": '',// 没有时间戳,系统会把接收到数据的时间作为时间戳
+   "rank": {
+       "A192.168.1.1": 12, //数据项目和分数
+       "B172.15.1.125": 56,
+       'C172.16.123.18': 10000,
+       'D114.114.114.114': 4
+   }
+}
+~~~
+- 返回格式
+~~~javascript
+{'status':'ok'}//ok,err
+~~~
+
 请求总排名的top N：
 
 - 请求地址： query.php?method=queryRankByName
-
-
 - 参数格式： 
 ~~~javascript
 {
@@ -14,9 +32,6 @@
     byScore: false//按分数查询还是按排名查询，填false表明查询排名在[start,stop]的ip，填true表明查询分数在[start,stop]的ip
 }
 ~~~
-
-
-
 - 返回格式：
   - 当不带ip加分时间，也不带ip分数时
 ​	name字段和post请求的字段一致，time为当前系统时间，rank为排名数组
@@ -32,6 +47,7 @@
     ]
 }	
 ~~~
+   
   - 当只带有withScores／withTime其中一个选项时
 name和time意义同上，rank对象的key为ip，如果是withScores选项，则value的值为分数，withTime选项则为最后一次加分时间的时间戳
 ~~~javascript
@@ -111,5 +127,4 @@ name和time意义同上，rank对象的key为ip，如果是withScores选项，�
 ~~~javascript
 {'count':10}//删除了10条改name的添加纪录
 ~~~
-
 

@@ -163,8 +163,8 @@
 
 <body>
 <div style="display:inline-block;float:left;margin-top:10px;margin-left:30px;">
-    <p class="datep" style="display:none;"><input class="datainp" id="startTime" type="text" value="0"></p>
-    <p class="datep" style="display:none;"><input class="datainp" id="stopTime" type="text" value="0"></p>
+    <p class="datep" style="display:none;"><input class="datainp" id="startTime" type="text" value="-1"></p>
+    <p class="datep" style="display:none;"><input class="datainp" id="stopTime" type="text" value="-1"></p>
     <p class="datep">
         <input style="width:268px;text-align:center;" class="datainp" id="startTimeBtn" type="text" placeholder="选择开始时间"
                readonly>
@@ -181,7 +181,7 @@
         <select id="nameDropList" class="sctShow"></select>
         <!--在这里填入你要下个页面显示多少个图-->
         <div id="search" class="addBtn">查找</div>
-        <div class="addBtn">删除</div>
+        <div id="delete" class="addBtn">删除</div>
     </div>
     <!--  </div> -->
     <div class="wrapper">
@@ -209,7 +209,7 @@
     jeDate({
         dateCell: "#stopTimeBtn",
         format: "YYYY-MM-DD hh:mm:ss",
-        isinitVal: true,
+        isinitVal: false,
         isTime: true, //isClear:false,
         minDate: "2014-09-19 00:00:00",
         okfun: function (val) {
@@ -217,12 +217,15 @@
         },
         choosefun: function (val) {
             $('#stopTime').val(Date.parse(val) / 1000);
+        },
+        clearfun: function (val) {
+            $('#stopTime').val(-1);
         }
     });
     jeDate({
         dateCell: "#startTimeBtn",
         format: "YYYY-MM-DD hh:mm:ss",
-        isinitVal: true,
+        isinitVal:false,
         isTime: true, //isClear:false,
         minDate: "2014-09-19 00:00:00",
         okfun: function (val) {
@@ -230,6 +233,8 @@
         },
         choosefun: function (val) {
             $('#startTime').val(Date.parse(val) / 1000);
+        }, clearfun: function (val) {
+            $('#starttime').val(-1)
         }
     });
     //上一页按钮点击事件
@@ -242,6 +247,17 @@
     });
     $("#search").on('click', function () {
         downloadRank();
+    });
+    $('#delete').on('click', function () {
+        var name = $('#nameDropList').find('option:selected').val();
+        $.post('delete.php', {data: JSON.stringify({'name': name})}).done(function (count) {
+            count = JSON.parse(count);
+            if (count.hasOwnProperty('count')) {
+                alert('删除了' + count['count'] + '条数据');
+            } else {
+                alert('删除错误!');
+            }
+        });
     });
     optionTemplate = {
         backgroundColor: 'black',

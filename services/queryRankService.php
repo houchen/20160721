@@ -1,7 +1,6 @@
 <?php
 
 /**
- * Created by PhpStorm.
  * User: houchen
  * Date: 7/21/16
  * Time: 7:50 PM
@@ -27,7 +26,6 @@ define('nameIDKey', 'id:hash');//name与id对应关系的哈希表key,该key在I
 define('nameCounter', 'name:counter');//生成name对应id的计数器
 define('logCounter', 'log:counter');
 
-define('LOG_PATH', '/Users/houchen/php.log');
 
 class rankQuery
 {
@@ -35,6 +33,8 @@ class rankQuery
 
     public function __construct()
     {
+        //todo:检查cookie中是否有可用redis连接?
+        //redis连接可以保存到cookie中吗?
 //        if (!$this->_redisConn) {
 //            if (isset($_COOKIE['redisConn'])) {
 //                $this->_redisConn = $_COOKIE['redisConn'];
@@ -57,7 +57,7 @@ class rankQuery
         }
     }
 
-    private function use ($db)
+    private function selectDB ($db)
     {
         static $currDB = 0;
         if ($currDB != $db) {
@@ -68,18 +68,13 @@ class rankQuery
 
     private function getNameID($name)
     {
-        $this->use(InfoDB);
+        $this->selectDB(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);
         if ($nameID == false) {
             return null;
         } else {
             return $nameID;
         }
-    }
-
-    private function addName($name)
-    {
-
     }
 
     private function checkTime($rank)
@@ -91,12 +86,13 @@ class rankQuery
             return time();
         }
     }
-
+    //给每个name对应的rank加上最后一次更新时间
+    //fixme:还没有完成,需不需要这个功能?
     private function associateRankTime($nameID, &$ranks, $withScore)
     {
         throw new Exception('not implement:associateRankTime');
         $ranksAndTime = array();
-        $this->use(LatestUpdateDB);
+        $this->selectDB(LatestUpdateDB);
         if ($withScore) {
             $timeList = $this->_redisConn->hMGet($nameID, array_keys($ranks));
             foreach ($ranks as $key => $score) {
@@ -114,7 +110,7 @@ class rankQuery
     public function addRank(IPRank $rank)
     {
         //查找名字的ID,或者添加新的名字
-        $this->use(InfoDB);
+        $this->selectDB(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $rank->name);
         if ($nameID == false) {
             $nameID = $this->_redisConn->incr(nameCounter);
@@ -126,24 +122,23 @@ class rankQuery
         $time = $this->checkTime($rank);
 
         //添加时间序列
-        $this->use(TimeDB);
+        $this->selectDB(TimeDB);
         $this->_redisConn->zAdd($nameID, $time, $logID);
 
         //更新总时段排名
-        $this->use(UnionDB);
+        $this->selectDB(UnionDB);
         foreach ($rank->rank as $key => $score) {
             $this->_redisConn->zIncrBy($nameID, $score, $key);
         }
-//        $this->_redisConn->sort()
         //更新分时段排名
-        $this->use(RankDB);
+        $this->selectDB(RankDB);
         foreach ($rank->rank as $key => $score) {
             //todo:
             $this->_redisConn->zIncrBy($logID, $score, $key);
         }
 
-        $this->use(LatestUpdateDB);
-        //todo:
+        //todo:保存最后一次更新时间?
+//        $this->use(LatestUpdateDB);
 //        foreach ($rank->rank as $key => $score) {
 //            $lastTime = $this->_redisConn->hGet($nameID, $key);
 //            if ($lastTime == false || $lastTime < $time) {
@@ -168,7 +163,7 @@ class rankQuery
 
     public function queryRankByID($nameID, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
     {
-        $this->use(UnionDB);
+        $this->selectDB(UnionDB);
         if ($byScore) {
             $ranks = $this->_redisConn->zRevRangeByScore($nameID, $start, $stop, $withScores);
         } else {
@@ -183,7 +178,7 @@ class rankQuery
 
     public function queryRankByName2($name, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
     {
-        $this->use(InfoDB);
+        $this->selectDB(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);
         if ($nameID == false) return null;//not exist
         return $this->queryRankByID($nameID, $start, $stop, $withScores, $withTime, $byScore);
@@ -195,26 +190,21 @@ class rankQuery
         //到2100年
         if ($startTimestamp < 1 || $stopTimestamp < 1 || $stopTimestamp > 4102419661) throw new Exception('illegal time interval');
 
-        $this->use(TimeDB);
-//        $maxTime=$this->_redisConn->zRevRank();
-//        if($stopTimestamp>){
-//
-//        }
-
+        $this->selectDB(TimeDB);
+        //todo:按稍大的时间范围搜索可能已经存在的归并过的排序
         $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp, array('withscores' => false));
-
 
         if ($logIDs == false) return null;
 
         $mergedKey = $nameID . ':' . reset($logIDs) . ':' . end($logIDs);
-        $this->use(UnionDB);
+        $this->selectDB(UnionDB);
         //已经有归并的key
         if (!$this->_redisConn->exists($mergedKey)) {
-            $this->use(RankDB);
+            $this->selectDB(RankDB);
             $this->_redisConn->zUnion($mergedKey, $logIDs);
             $this->_redisConn->move($mergedKey, UnionDB);
         }
-        $this->use(UnionDB);
+        $this->selectDB(UnionDB);
         $this->_redisConn->expire($mergedKey, 900);//15分钟过期
         $ranks = $this->_redisConn->zRevRange($mergedKey, 0, $count, $withScores);
         if ($withTime == true) {
@@ -237,13 +227,6 @@ class rankQuery
         return $rankArr;
     }
 
-
-    public
-    function queryIPByCIDR()
-    {
-
-    }
-
     public
     function doQuery($NamePattern, $StartTime, $EndTime, $IP, $IPMask, $count)
     {
@@ -254,7 +237,7 @@ class rankQuery
     public
     function deleteByName($name, $startTime = 0, $stopTime = -1, $byRank = false)
     {
-        $this->use(InfoDB);
+        $this->selectDB(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);
         if ($nameID == false) {
             return 0;
@@ -262,15 +245,15 @@ class rankQuery
             $this->_redisConn->hDel(nameIDKey, $name);
         }
 
-        $this->use(TimeDB);
+        $this->selectDB(TimeDB);
         $logIDs = $this->_redisConn->zRange($nameID, 0, -1);
         $this->_redisConn->del($nameID);
-        $this->use(RankDB);
+        $this->selectDB(RankDB);
         $deleteCount = $this->_redisConn->del($logIDs);
-        $this->use(UnionDB);
+        $this->selectDB(UnionDB);
         $this->_redisConn->del($nameID);
-        $this->use(LatestUpdateDB);
-        $this->_redisConn->del($nameID);
+//        $this->use(LatestUpdateDB);
+//        $this->_redisConn->del($nameID);
         return $deleteCount;
     }
 
@@ -302,24 +285,12 @@ class rankQuery
         return $deleted;
     }
 
-    public function getNameIDList($namePattern = '*', $count = 100)
+    public function getNameIDList($namePattern = '*', $count = 200)
     {
-        $this->use(InfoDB);
-
-//        session_start();
-//        if (isset($_SESSION['nameScanIterator'])) {
-//            $it = $_SESSION['nameScanIterator'];
-//        } else {
+        $this->selectDB(InfoDB);
+        //todo:在session中保存游标(不同次请求redis链接可能已经断开,改游标还可用吗?)
         $it = null;
-//        }
         $names = $this->_redisConn->hScan(nameIDKey, $it, $namePattern, $count);
-//        if ($it != 0) {
-//            保存游标
-//            $_SESSION['nameScanIterator'] = $it;
-//        } else {
-//            一次迭代扫描已经完成,删除游标
-//            unset($_SESSION['nameScanIterator']);
-//        }
         if ($names == false) {
             $names = null;
         }
@@ -327,7 +298,7 @@ class rankQuery
     }
 
     public
-    function getNameList($namePattern = '*', $count = 100)
+    function getNameList($namePattern = '*', $count = 200)
     {
         return array_keys($this->getNameIDList($namePattern, $count));
     }

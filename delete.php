@@ -7,12 +7,11 @@
  */
 
 require_once('services/queryRankService.php');
+$client = new rankQuery();
 if (isset($_POST['data'])) {
     $delPara = json_decode($_POST['data']);
-    $client = new rankQuery();
     $count = $client->deleteByName($delPara->name);
 } else if (isset($_GET['name'])) {
-    $client = new rankQuery();
     $count = $client->deleteByName($_GET['name']);
 } else {
     echo json_encode(array('msg' => 'delete error'));
