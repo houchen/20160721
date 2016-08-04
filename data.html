@@ -178,7 +178,7 @@
 <div class="header">
     <div class="div01">
         <input id="inputName" placeholder="输入过滤条件" class="inputName" style="width: 92px;"/>
-        <select id="nameDropList" class="sctShow"></select>
+        <select id="nameDropList" class="sctShow">查看名字列表</select>
         <!--在这里填入你要下个页面显示多少个图-->
         <div id="search" class="addBtn">查找</div>
         <div id="delete" class="addBtn">删除</div>
@@ -211,7 +211,6 @@
         format: "YYYY-MM-DD hh:mm:ss",
         isinitVal: false,
         isTime: true, //isClear:false,
-        minDate: "2014-09-19 00:00:00",
         okfun: function (val) {
             $('#stopTime').val(Date.parse(val) / 1000);
         },
@@ -225,9 +224,8 @@
     jeDate({
         dateCell: "#startTimeBtn",
         format: "YYYY-MM-DD hh:mm:ss",
-        isinitVal:false,
+        isinitVal: false,
         isTime: true, //isClear:false,
-        minDate: "2014-09-19 00:00:00",
         okfun: function (val) {
             $('#startTime').val(Date.parse(val) / 1000);
         },
@@ -250,7 +248,19 @@
     });
     $('#delete').on('click', function () {
         var name = $('#nameDropList').find('option:selected').val();
-        $.post('delete.php', {data: JSON.stringify({'name': name})}).done(function (count) {
+        var startTime = $('#startTime').val();
+        var stopTime = $('#stopTime').val();
+        var delParam = {'name': name};
+        if (startTime == -1 || stopTime == -1) {
+            posting = $.post('delete.php', {data: JSON.stringify(delParam)});
+        } else {
+            delParam.start = startTime;
+            delParam.stop = stopTime;
+            posting = $.post('delete.php', {
+                data: JSON.stringify(delParam)
+            });
+        }
+        posting.done(function (count) {
             count = JSON.parse(count);
             if (count.hasOwnProperty('count')) {
                 alert('删除了' + count['count'] + '条数据');
@@ -406,15 +416,22 @@
             queryPara.count = topN;
             topNPosting = $.post('query.php?method=queryRankByTimeInterval', {'data': JSON.stringify(queryPara)});
         }
+        function cleanCanvas() {
+            while (previousDiagram.length > 0) {
+                previousDiagram.pop().dispose();
+            }
+            $('#diagramCanvas').empty();
+        }
+
         topNPosting.done(function (ranks) {
+                    if (ranks == null) {
+                        cleanCanvas();
+                    }
                     var nextRank = 0;
                     updateDiagram = {
                         nextPage: function (count) {
                             if (nextRank > ranks.length)return;
-                            while (previousDiagram.length > 0) {
-                                previousDiagram.pop().dispose();
-                            }
-                            $('#diagramCanvas').empty();
+                            cleanCanvas();
                             //todo:取消重绘canvas,只是改变他的data
                             for (var i = 0; i < count && nextRank < ranks.length; i++) {
                                 addDiagram(ranks[nextRank++]);
@@ -423,10 +440,7 @@
                         previousPage: function (count) {
                             if (nextRank < 0)return;
                             nextRank -= previousDiagram.length;
-                            while (previousDiagram.length > 0) {
-                                previousDiagram.pop().dispose();
-                            }
-                            $('#diagramCanvas').empty();
+                            cleanCanvas();
                             var revertStack = [];
                             for (var i = 0; i < count && nextRank - 1 - i >= 0; i++) {
                                 revertStack.push(nextRank - i - 1);

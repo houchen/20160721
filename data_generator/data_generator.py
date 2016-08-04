@@ -63,7 +63,7 @@ for i in range(1, 100):
     weblist.write('\n')
     webdata = open(randomweb, 'w')
     ip_str = random.choice(RANDOM_IP_POOL)
-    for k in range(1, random.randint(2, 10)):  # 给这些网站生成随机的时间内的数据
+    for k in range(1, random.randint(2, 15)):  # 给这些网站生成随机的时间内的数据
         randomtime = data_time + random.randint(-604800, 0)
         rank_str = ''
         for ip in range(random.randint(10, 40)):  # 生成随机时间内的ip

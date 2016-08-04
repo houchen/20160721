@@ -8,11 +8,6 @@
 require_once('redisConfig.php');
 require_once('model/status.php');
 
-//keys,discarded
-define('NameSetKey', 'NAME_SET');
-define('TMPZUnionKey', 'tmpUnion:set');
-define('TimestampKey', 'timestamp:set');
-
 
 //dbs
 define('RankDB', 0);
@@ -25,6 +20,7 @@ define('LatestUpdateDB', 4);
 define('nameIDKey', 'id:hash');//name与id对应关系的哈希表key,该key在InfoDB中
 define('nameCounter', 'name:counter');//生成name对应id的计数器
 define('logCounter', 'log:counter');
+define('TMPZUnionKey', 'tmpUnion:set');
 
 
 class rankQuery
@@ -57,7 +53,7 @@ class rankQuery
         }
     }
 
-    private function selectDB ($db)
+    private function selectDB($db)
     {
         static $currDB = 0;
         if ($currDB != $db) {
@@ -233,9 +229,33 @@ class rankQuery
 
     }
 
+    public function deleteTimeIntervalByName($name, $startTime = 0, $stopTime = 0)
+    {
+        $nameID = $this->getNameID($name);
+        if ($nameID == null) return 0;
+
+        $this->selectDB(TimeDB);
+
+        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTime, $stopTime, array('withscores' => false));
+        if ($logIDs == false) return 0;
+
+        $this->selectDB(RankDB);
+        $this->_redisConn->zUnion(TMPZUnionKey, $logIDs);
+        $this->_redisConn->move(TMPZUnionKey, UnionDB);
+        $delCount=$this->_redisConn->del($logIDs);
+
+        $this->selectDB(UnionDB);
+        $this->_redisConn->zUnion($nameID, array($nameID, TMPZUnionKey), array(1, -1));
+        $this->_redisConn->zRemRangeByScore($nameID,'-inf', 0);
+        $this->_redisConn->del(TMPZUnionKey);
+
+        $this->selectDB(InfoDB);
+        $this->_redisConn->hDel(nameIDKey,$name);
+        return $delCount;
+    }
 
     public
-    function deleteByName($name, $startTime = 0, $stopTime = -1, $byRank = false)
+    function deleteByName($name)
     {
         $this->selectDB(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);
@@ -258,7 +278,7 @@ class rankQuery
     }
 
     public
-    function deleteRankByName($name, $withTime = false)
+    function deleteRankByName($name)
     {
         $this->_redisConn->select(InfoDB);
         $nameID = $this->_redisConn->hGet(nameIDKey, $name);

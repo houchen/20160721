@@ -10,7 +10,11 @@ require_once('services/queryRankService.php');
 $client = new rankQuery();
 if (isset($_POST['data'])) {
     $delPara = json_decode($_POST['data']);
-    $count = $client->deleteByName($delPara->name);
+    if (isset($delPara->start) && isset($delPara->stop)) {
+        $count = $client->deleteTimeIntervalByName($delPara->name, $delPara->start, $delPara->stop);
+    } else {
+        $count = $client->deleteByName($delPara->name);
+    }
 } else if (isset($_GET['name'])) {
     $count = $client->deleteByName($_GET['name']);
 } else {
