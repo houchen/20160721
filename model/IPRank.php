@@ -21,10 +21,20 @@ class IPRank
         }
     }
 
-    public function set($data)
+    public function set(array $data)
     {
-        foreach ($data as $key => $item) {
-            $this->{$key} = $item;
+        if (is_array($data)) {
+            $this->name = $data['name'];
+            $this->time = $data['time'];
+        }
+        if (is_array($data['rank'])) {
+            $this->rank = $data['rank'];
+        } else {
+            $scores = (array)($data['rank']);
+            $this->rank = array();
+            foreach ($scores as $key => $score) {
+                $this->rank[$key] = (double)$scores;
+            }
         }
     }
 }

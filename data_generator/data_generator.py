@@ -1,16 +1,18 @@
 # encoding=utf-8
 import random
 from randomIP import getRandomIP
-import urllib, urllib2, json, requests
+import urllib, urllib2, json
 from urllib import urlencode
 from word import words,ua
 import sys
+import time
 reload(sys)
 sys.setdefaultencoding('utf-8')
 websitprefix = ['www.', 'mail.', 'bbs.']
 websitpsuffix = ['.com', '.cn', '.org']
+#api for test
+url = 'http://localhost:8088/20160721/add.php'
 
-import time
 
 RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
 
@@ -44,7 +46,6 @@ def randomwebsite():
 
 
 def addip(ip_json):
-    url = 'http://localhost:8088/20160721/add.php'
     headers = {'Content-Type': 'text/json;charset=UTF-8'}
     # jdata = json.dumps(ip_json)
     # req = urllib2.Request(url, jdata)

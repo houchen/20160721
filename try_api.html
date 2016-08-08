@@ -45,6 +45,28 @@
             })
         }
 
+
+        function getaddip() {
+            $.ajax({
+                url: "add.php",
+                type: "post",
+                dataType: "json",
+                data: {
+                    'name': 'log_ip',
+                    'create_time': 12312312,
+
+                    'table': '{" 1.198.35.100 ": 1," 180.175.109.74 ": 4'
+                },
+                success: function (data) {
+                    $('#result').append('<br>status:' + data['status'] + '</br>');
+                },
+                error: function (data) {
+                    $('#result').append('<br>status:' + data['status'] + '</br>');
+                }
+            });
+
+//            $.post('add.php','create_time=1470383507&name=log_ip&table={"101.71.37.160 ":1," 217.69.128.184 ":4," 136.167.36.74 ":1," 101.93.68.225 ":1," 36.250.86.198 ":1," 117.176.255.201 ":1}')
+        }
         var query_param = {
             'name': 'foo_name',
             //指定范围,这里查询全部范围
@@ -100,8 +122,8 @@
 
         var query_param_by_timeinterval = {
             'name': 'foo_name',
-            start:0,
-            stop:0,
+            start: 0,
+            stop: 0,
             withScores: true,
             withTime: false
         };
@@ -112,7 +134,7 @@
             query_param_by_timeinterval['name'] = $('#name').val();
             query_param_by_timeinterval.start = $('#start').val();
             query_param_by_timeinterval.stop = $('#stop').val();
-            query_param_by_timeinterval.count=$('#queryCount').val();
+            query_param_by_timeinterval.count = $('#queryCount').val();
             $.ajax({
                 url: 'query.php?method=queryRankByTimeInterval',
                 type: 'post',
@@ -206,6 +228,8 @@
     <button onclick="querybytimeinterval()">try_query_by_time_interval</button>
     <br>
     <button onclick="deletebyname()">try_delete</button>
+    <br>
+    <button onclick="getaddip()">try get add</button>
     <br>
     hostname<input id="name" type="text" value="foo_name"/><br>
     unix timestamp/rank start at:<input id="start" type="text" value="0"><br>

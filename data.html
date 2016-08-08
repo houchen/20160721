@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>try echarts</title>
+    <link href="static/css/bootstrap.min.css">
     <style type="text/css">
         select {
             border: solid 1px #000;
             appearance: none;
             -moz-appearance: none;
             -webkit-appearance: none;
-            background: url("http://ourjs.github.io/static/2015/arrow.png") no-repeat scroll right center transparent;
+            background: no-repeat scroll right center transparent;
             padding-right: 14px;
         }
 
@@ -125,6 +126,15 @@
             color: white;
         }
 
+        .sctShow option:hover {
+            cursor: pointer;
+        }
+
+        .sctShow option {
+            color: black;
+            background: #C0C0C0
+        }
+
         .datainp {
             width: 200px;
             height: 30px;
@@ -178,7 +188,7 @@
 <div class="header">
     <div class="div01">
         <input id="inputName" placeholder="输入过滤条件" class="inputName" style="width: 92px;"/>
-        <select id="nameDropList" class="sctShow">查看名字列表</select>
+        <select id="nameDropList" class="sctShow form-control">查看名字列表</select>
         <!--在这里填入你要下个页面显示多少个图-->
         <div id="search" class="addBtn">查找</div>
         <div id="delete" class="addBtn">删除</div>
@@ -199,11 +209,11 @@
 </body>
 <script src="static/js/echarts.js"></script>
 <script src="static/js/jquery.min.js"></script>
-<script src="http://code.jquery.com/jquery-1.9.0.min.js"></script>
+<script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
 <script type="text/javascript" src="static/jedate/jedate.js"></script>
 <script type="text/javascript">
     //jeDate.skin('gray');
-    var pageCount = 6;
+    var pageCount = 4;
     var screenHeight = $(window).height() - 130;
     $("#diagramCanvas").css('height', screenHeight);
     jeDate({
@@ -366,6 +376,7 @@
     var updateDiagram;
     optionTemplateJSON = JSON.stringify(optionTemplate);
     function addDiagram(rankWithName) {
+        if (rankWithName.rank == null)return;
         var name = rankWithName.name.toString();
         var scores = [];
         var keys = [];
@@ -432,7 +443,7 @@
                         nextPage: function (count) {
                             if (nextRank > ranks.length)return;
                             cleanCanvas();
-                            //todo:取消重绘canvas,只是改变他的data
+                            //todo:取消重绘canvas,只是改变他的data属性
                             for (var i = 0; i < count && nextRank < ranks.length; i++) {
                                 addDiagram(ranks[nextRank++]);
                             }

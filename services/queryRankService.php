@@ -5,7 +5,7 @@
  * Date: 7/21/16
  * Time: 7:50 PM
  */
-require_once('redisConfig.php');
+require_once('config.php');
 require_once('model/status.php');
 
 
@@ -123,15 +123,22 @@ class rankQuery
 
         //更新总时段排名
         $this->selectDB(UnionDB);
-        foreach ($rank->rank as $key => $score) {
-            $this->_redisConn->zIncrBy($nameID, $score, $key);
+        $scores = $rank->rank;
+        if (is_array($scores)) {
+            foreach ($scores as $key => $score) {
+                $this->_redisConn->zIncrBy($nameID, $score, $key);
+            }
+        } else {
+            throw  new Exception('illegal ranks');
         }
+
         //更新分时段排名
         $this->selectDB(RankDB);
-        foreach ($rank->rank as $key => $score) {
+        foreach ($scores as $key => $score) {
             //todo:
             $this->_redisConn->zIncrBy($logID, $score, $key);
         }
+
 
         //todo:保存最后一次更新时间?
 //        $this->use(LatestUpdateDB);
@@ -183,8 +190,7 @@ class rankQuery
 
     public function queryTimeIntervalRankByID($nameID, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
     {
-        //到2100年
-        if ($startTimestamp < 1 || $stopTimestamp < 1 || $stopTimestamp > 4102419661) throw new Exception('illegal time interval');
+
 
         $this->selectDB(TimeDB);
         //todo:按稍大的时间范围搜索可能已经存在的归并过的排序
@@ -211,6 +217,11 @@ class rankQuery
 
     public function queryRankByTimeInterval2($namePattern, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
     {
+        //到2100年
+        if ($startTimestamp < 1 || $stopTimestamp < 1 || $stopTimestamp > 4102419661) {
+            return array('msg' => 'time error');
+        }
+        if ($namePattern == null) return array('msg' => 'name  error');
         $nameIDs = $this->getNameIDList($namePattern, 100);
         if ($nameIDs == null) return null;
 
@@ -242,15 +253,15 @@ class rankQuery
         $this->selectDB(RankDB);
         $this->_redisConn->zUnion(TMPZUnionKey, $logIDs);
         $this->_redisConn->move(TMPZUnionKey, UnionDB);
-        $delCount=$this->_redisConn->del($logIDs);
+        $delCount = $this->_redisConn->del($logIDs);
 
         $this->selectDB(UnionDB);
         $this->_redisConn->zUnion($nameID, array($nameID, TMPZUnionKey), array(1, -1));
-        $this->_redisConn->zRemRangeByScore($nameID,'-inf', 0);
+        $this->_redisConn->zRemRangeByScore($nameID, '-inf', 0);
         $this->_redisConn->del(TMPZUnionKey);
 
         $this->selectDB(InfoDB);
-        $this->_redisConn->hDel(nameIDKey,$name);
+        $this->_redisConn->hDel(nameIDKey, $name);
         return $delCount;
     }
 
