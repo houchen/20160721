@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>try echarts</title>
+    <title>当前排名</title>
     <link href="static/css/bootstrap.min.css">
     <style type="text/css">
         select {
@@ -37,8 +37,9 @@
             /*display: inline-block;*/
             margin: 0 auto;
             height: 50px;
-            font-size: 40px;
+            font-size: 30px;
             font-family: "微软雅黑";
+            border: 1px solid red;
             /*color: red;*/
         }
 
@@ -69,23 +70,21 @@
             display: inline-block;
             float: left;
             /*margin-top: 20px;*/
-            margin-left: 330px;
+            margin-left: 15px;
             /*border: 1px solid green;*/
         }
 
         .addBtn {
-            height: 30px;
+            height: 25px;
             margin-left: 10px;
             width: 60px;
-            margin-top: 3px;
-            border-radius: 4px;
-            background: red;
             line-height: 30px;
             text-align: center;
             color: white;
             font-weight: bold;
-            /*float: left;*/
             float: right;
+            color: red;
+            border-bottom: 1px solid red;
         }
 
         .addBtn:hover {
@@ -109,11 +108,12 @@
         }
 
         .header {
-            width: 500px;
+            width: 300px;
             height: 120px;
             /*border:1px solid red;*/
-            float: right;
-            margin-top: -50px;
+            float: left;
+            /*margin-top:5px;*/
+            /*margin-top: -50px;*/
         }
 
         .sctShow {
@@ -136,83 +136,251 @@
         }
 
         .datainp {
-            width: 200px;
+            width: 600px;
             height: 30px;
             border: 1px #ccc solid;
         }
 
         .datep {
             margin-bottom: 40px;
+            float: left;
         }
 
         .pageWrap {
-            width: 200px;
-            height: 40px;
+            width: 230px;
+            height: 42px;
             margin: 0 auto;
+            float: left;
         }
 
         .pageBtn {
-            width: 80px;
+            /*width: 60px;*/
             display: inline-block;
             float: left;
             margin-left: 10px;
-            border-radius: 4px;
             text-align: center;
             line-height: 40px;
-            background: red;
-            font-size: 16px;
-            font-weight: bold;
+            color: red;
+            border-bottom: 1px solid red;
         }
 
         .pageBtn:hover {
             cursor: pointer;
         }
 
+        .denyWrapper {
+            position: absolute;
+            margin: 10px auto;
+            z-index: 999;
+            margin-left: 150px;
+            height: 500px;
+            background: white;
+            color: black;
+            border-radius: 8px;
+            width: 1000px;
+        }
+
+        .denyTable {
+            width: 100%;
+            /*border:1px solid green;*/
+        }
+
+        .denyTdName {
+            width: 15%;
+            height: 40px;
+            border: 1px solid black;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        .denyTdIpName {
+            width: 20%;
+            height: 40px;
+            border: 1px solid black;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        .denyTdCause {
+            width: 35%;
+            height: 40px;
+            border: 1px solid black;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        .denyTdTime {
+            width: 20%;
+            height: 40px;
+            border: 1px solid black;
+            text-align: center;
+            line-height: 40px;
+        }
+
+        .denyBtn {
+            /*width: 10%;*/
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border: 1px solid black;
+        }
+
+        .denyBtn button:hover {
+            cursor: pointer;
+        }
+
+        .denyPage {
+            width: 150px;
+            height: 40px;
+            margin: 0 auto;
+        }
+
+
     </style>
 </head>
 
 <body>
-<div style="display:inline-block;float:left;margin-top:10px;margin-left:30px;">
-    <p class="datep" style="display:none;"><input class="datainp" id="startTime" type="text" value="-1"></p>
-    <p class="datep" style="display:none;"><input class="datainp" id="stopTime" type="text" value="-1"></p>
-    <p class="datep">
-        <input style="width:268px;text-align:center;" class="datainp" id="startTimeBtn" type="text" placeholder="选择开始时间"
-               readonly>
-    </p>
-    <p class="datep">
-        <input style="width:268px;text-align:center;" class="datainp" id="stopTimeBtn" type="text" placeholder="选择结束时间"
-               readonly>
-    </p>
-</div>
-<div class="title">当前排名</div>
-<div class="header">
-    <div class="div01">
-        <input id="inputName" placeholder="输入过滤条件" class="inputName" style="width: 92px;"/>
-        <select id="nameDropList" class="sctShow form-control">查看名字列表</select>
-        <!--在这里填入你要下个页面显示多少个图-->
-        <div id="search" class="addBtn">查找</div>
-        <div id="delete" class="addBtn">删除</div>
+<div style="width:100%;height:50px;padding-left: 200px;">
+    <div style="display:inline-block;float:left;margin-top:5px;">
+        <p class="datep" style="display:none;"><input class="datainp" id="startTime" type="text" value="-1"></p>
+        <p class="datep" style="display:none;"><input class="datainp" id="stopTime" type="text" value="-1"></p>
+        <p class="datep">
+            <input style="width:268px;text-align:center; display: none" class="datainp" id="startTimeBtn" type="text"
+                   placeholder="选择开始时间"
+                   readonly>
+        </p>
+        <p class="datep">
+            <input style="width:268px;text-align:center;display: none" class="datainp" id="stopTimeBtn" type="text"
+                   placeholder="选择结束时间"
+                   readonly>
+        </p>
     </div>
-    <!--  </div> -->
+    <div class="header">
+        <div class="div01">
+            <input id="inputName" placeholder="输入过滤条件" class="inputName" style="width: 92px;display: none"/>
+            <button id="showAllRank" class="inputName" style="width: 92px;" onclick="downloadAllRank()">查找全部</button>
+            <select id="nameDropList" class="sctShow form-control">查看名字列表</select>
+            <!--在这里填入你要下个页面显示多少个图-->
+            <a id="search" class="addBtn" style="margin-top:-5px;">查找</a>
+            <a id="delete" class="addBtn" style="margin-top: -12px;">删除</a>
+        </div>
+    </div>
     <div class="wrapper">
         <span class="showCount">显示数据的个数:</span>
-        <input id="showCountInput" class="inputName" value="10"/><br>
+        <input id="showCountInput" class="inputName" value="10"/>
+    </div>
+    <div class="pageWrap">
+        <a id="upPage" class="pageBtn">上一页</a>
+        <a id="downPage" class="pageBtn">下一页</a>
+        <a id="checkDeny" class="pageBtn" style="">查看封禁列表</a>
+    </div>
+    <div>
+        <input id="whiteMember" type="text" value="" placeholder="192.168.0.1">
+        <button type="button" onclick="addWhiteList($('#whiteMember').val())">添加白名单</button>
+        <button type="button" onclick="removeWhiteList()">移除白名单</button>
+    </div>
+    <div id="denyWrapper" class="denyWrapper" style="display:none;">
+        <table id="denyTable" class="denyTable">
+        </table>
+        <div id="denyPage" class="denyPage" style="display:none;">
+            <a id="denyStep" class="pageBtn">上一页</a>
+            <a id="denyNext" class="pageBtn">下一页</a>
+        </div>
     </div>
 </div>
-<div class="pageWrap">
-    <div id="upPage" class="pageBtn">上一页</div>
-    <div id="downPage" class="pageBtn">下一页</div>
-</div>
-
 <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
 <div id="diagramCanvas" class="diagramCanvas"></div>
 </body>
 <script src="static/js/echarts.js"></script>
 <script src="static/js/jquery.min.js"></script>
 <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="static/js/DateFormat.js"></script>
 <script type="text/javascript" src="static/jedate/jedate.js"></script>
 <script type="text/javascript">
-    //jeDate.skin('gray');
+    var getDenyData = {
+        name: '',
+        deny: {}
+    };
+    //绘制被封ip展示图
+    var storeIPName = new Array();
+    var storeCause = new Array();
+    var storeTime = new Array();
+    function drawDeny(tableData) {
+        for (var value in tableData.deny) {
+            storeIPName.push(value);
+            for (var str in getDenyData.deny[value]) {
+                if (str == 'cause') {
+                    storeCause.push(getDenyData.deny[value][str]);
+                } else {
+                    storeTime.push(getDenyData.deny[value][str]);
+                }
+            }
+        }
+        for (var i = 0; i < getDenyData.count; i++) {
+            var table = $("#denyTable");
+            var tr = $("<tr class='denyTr createTr'></tr>");
+            table.append(tr);
+            var tdName = $("<td class='denyTdName'></td>");
+            var tdIpName = $("<td class='denyTdIpName'></td>");
+            var tdCause = $("<td class='denyTdCause'></td>");
+            var tdTime = $("<td class='denyTdTime'></td>");
+            var tdBtn = $("<td class='denyBtn'></td>");
+            var btn = $("<button class='btn'>添加到白名单</buton>");
+            tdBtn.append(btn);
+            tr.append(tdName);
+            tr.append(tdIpName);
+            tr.append(tdCause);
+            tr.append(tdTime);
+            tr.append(tdBtn);
+            tdIpName.html(storeIPName[i]);
+            tdCause.html(storeCause[i]);
+            tdTime.html(storeTime[i]);
+        }
+    }
+
+    //每页可以查看10条ip
+    //点击查看被解封的ip按钮:
+    $("#checkDeny").on('click', function () {
+        $("#denyPage").show();
+        $("#denyWrapper").show();
+        var firstTr = $("<tr class='denyTr' style='background:grey;'></tr>");
+        $('#denyTable').append(firstTr);
+        var firstTdName = $("<td class='denyTdName'>name</td>");
+        var firstTDIPName = $("<td class='denyTdIpName'>IpName</td>");
+        var firstCause = $("<td class='denyTdCause'>cause</td>");
+        var firstTime = $("<td class='denyTdTime'>time</td>");
+        var firstBtn = $("<td id='closeDeny' class='denyBtn'></td>");
+        firstTr.append(firstTdName);
+        firstTr.append(firstTDIPName);
+        firstTr.append(firstCause);
+        firstTr.append(firstTime);
+        firstTr.append(firstBtn);
+        var btn = $("<button class='btn'>关闭显示</buton>");
+        firstBtn.append(btn);
+        drawDeny(getDenyData);
+    });
+    //点击关闭显示按钮
+    $(document).on('click', '#closeDeny', function () {
+        $("#denyWrapper").hide();
+        $("#denyTable").find('.createTr').html('');
+    });
+    //点击解封按钮
+    $(document).on('click', '.btn', function () {
+        deny = $(this).parent().parent().find(".denyTdIpName").text();
+        addWhiteList(deny);
+        //删除当前数据
+        $(this).parent().parent().html('');
+    });
+    $(function () {
+        var keyInput = $("#inputName");
+        keyInput.keypress(function (e) { 
+        //这里给function一个事件参数命名为e，叫event也行，随意的，e就是IE窗口发生的事件。
+            var key = e.which; //e.which是按键的值
+            if (key == 13) {
+                downloadRank();
+            }
+        });
+    });
     var pageCount = 4;
     var screenHeight = $(window).height() - 130;
     $("#diagramCanvas").css('height', screenHeight);
@@ -242,7 +410,7 @@
         choosefun: function (val) {
             $('#startTime').val(Date.parse(val) / 1000);
         }, clearfun: function (val) {
-            $('#starttime').val(-1)
+            $('#startTime').val(-1)
         }
     });
     //上一页按钮点击事件
@@ -254,7 +422,8 @@
         updateDiagram.nextPage(pageCount);
     });
     $("#search").on('click', function () {
-        downloadRank();
+//        downloadRank();
+        downloadRankByName();
     });
     $('#delete').on('click', function () {
         var name = $('#nameDropList').find('option:selected').val();
@@ -325,7 +494,7 @@
         yAxis: [
             {
                 type: 'value',
-                name: 'score(万)',
+                name: 'score',
                 axisLabel: {
                     formatter: function (a) {
                         a = +a;
@@ -339,12 +508,12 @@
         dataZoom: [
             {
                 show: true,
-                start: 30,
+                start: 0,
                 end: 100
             },
             {
                 type: 'inside',
-                start: 94,
+                start: 0,
                 end: 100
             },
             {
@@ -372,7 +541,6 @@
     };
 
     var previousDiagram = [];
-    var diagramCountPerPage = 4;
     var updateDiagram;
     optionTemplateJSON = JSON.stringify(optionTemplate);
     function addDiagram(rankWithName) {
@@ -397,36 +565,42 @@
         echartOption.xAxis[0].data = keys;
         chart.setOption(echartOption);
     }
-    function downloadRank() {
-        var name = $('#inputName').val();
+    function getLocalTime(nS) {
+        return new Date(parseInt(nS) * 1000).toLocaleString().replace(/:\d{1,2}$/, ' ');
+    }
+    function downloadDenyList() {
+        var name = $('#nameDropList').val();
+        var url = 'query.php?method=fetchDenyList&name=' + name;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'text',
+            async: false,
+            success: function (denyList) {
+                var time2 = new Date().Format("yyyy-MM-dd HH:mm:ss");
+                getDenyData.name = $('#inputName').val();
+                denyList = JSON.parse(denyList);
+                for (var ip in denyList) {
+                    getDenyData.deny[ip] = {
+                        cause: denyList[ip],
+                        expireAt: getLocalTime(denyList[ip].split(':', 2)[0])
+                    };
+                }
+            }
+        })
+    }
+    function downloadAllRank() {
         var topN = $('#showCountInput').val();
-        var startTime = $('#startTime').val();
-        var stopTime = $('#stopTime').val();
-        var queryPara = {
-            name: name,
-            withScores: true,
-            byScore: false,
-            withTime: false
-// 该参数必须要有,指明查询起始名次,第0名最大;
-// 或者指明一个较小的过去时间,作为时间段的起始点;
-// 或者指明分数段的起始分数(仅byScore为true)
-//            start: 0,
-// 该参数指明结束名次;或指明一个较新的时间点,作为时间段的结束时间
-//            stop: topN,
-// 仅在查询方法为queryRankByTimeInterval时可用,表明每个时间段的查询结果想要多少条
-//            count:10
-        };
-        var topNPosting = {};
-        if (startTime == -1 || stopTime == -1) {
-            queryPara.start = 0;
-            queryPara.stop = topN;
-            topNPosting = $.post('query.php?method=queryRankByNamePattern', {'data': JSON.stringify(queryPara)});
-        } else {
-            queryPara.start = startTime;
-            queryPara.stop = stopTime;
-            queryPara.count = topN;
-            topNPosting = $.post('query.php?method=queryRankByTimeInterval', {'data': JSON.stringify(queryPara)});
-        }
+        var posting = $.get('query.php?method=queryAllRank', {'count': topN});
+        downloadRank(posting);
+    }
+    function downloadRankByName() {
+        var name = $('#nameDropList').val();
+        var topN = $('#showCountInput').val();
+        var posting = $.get('query.php?method=queryRankByName', {'name': name, 'count': topN});
+        downloadRank(posting);
+    }
+    function downloadRank(posting) {
         function cleanCanvas() {
             while (previousDiagram.length > 0) {
                 previousDiagram.pop().dispose();
@@ -434,13 +608,14 @@
             $('#diagramCanvas').empty();
         }
 
-        topNPosting.done(function (ranks) {
+        posting.done(function (ranks) {
                     if (ranks == null) {
                         cleanCanvas();
                     }
                     var nextRank = 0;
                     updateDiagram = {
                         nextPage: function (count) {
+                            console.log('next page');
                             if (nextRank > ranks.length)return;
                             cleanCanvas();
                             //todo:取消重绘canvas,只是改变他的data属性
@@ -481,5 +656,41 @@
         }
     });
 
+    function addWhiteList(name) {
+        var ip = name;
+        if (ip == '' || ip == undefined) {
+            return;
+        }
+        var url = 'query.php?method=addWhiteMember&member=' + ip;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'json',
+            success: function (data) {
+                alert('在白名单添加了' + data.count + '条数据')
+            },
+            error: function () {
+                alert('在白名单添加错误');
+            }
+        })
+    }
+    function removeWhiteList() {
+        var ip = $('#whiteMember').val();
+        if (ip == '') {
+            return;
+        }
+        var url = 'query.php?method=removeWhiteMember&member=' + ip;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'json',
+            success: function (data) {
+                alert('在白名单删除了' + data.count + '条数据')
+            },
+            error: function () {
+                alert('在白名单删除错误');
+            }
+        })
+    }
 </script>
 </html>

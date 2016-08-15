@@ -5,5 +5,5 @@
  * Date: 7/21/16
  * Time: 4:33 PM
  */
-define('redisAddr','localhost');
-define('redisPort','6379');
+define('redisAddr', '127.0.0.1');
+define('redisPort', '6379');

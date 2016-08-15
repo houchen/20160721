@@ -1,9 +1,10 @@
 # encoding=utf-8
+
 import random
 from randomIP import getRandomIP
 import urllib, urllib2, json
 from urllib import urlencode
-from word import words, ua
+from word import words, ip, timestamp
 import sys
 import time
 
@@ -12,7 +13,7 @@ sys.setdefaultencoding('utf-8')
 websitprefix = ['www.', 'mail.', 'bbs.']
 websitpsuffix = ['.com', '.cn', '.org']
 # api for test
-url = 'http://localhost:8088/20160721-zy/add.php'
+url = 'http://localhost:8088/20160721-fix/add.php'
 
 RANDOM_IP_POOL = ['192.168.10.0/24', '172.16.0.0/16', '192.168.1.0/24', '192.168.2.0/24']
 
@@ -36,7 +37,7 @@ def datetime_timestamp(dt):
     return int(s)
 
 
-data_time = time.time()
+data_time = int(time.time())
 
 
 def randomwebsite():
@@ -56,22 +57,13 @@ def addip(ip_json):
     # r = requests.post(url, data=payload, headers=headers)
     print r.read()
 
-
-weblist = open('weblist.txt', 'w')
-for i in range(1, 100):
-    randomweb = randomwebsite()
-    weblist.write(randomweb)
-    weblist.write('\n')
-    webdata = open(randomweb, 'w')
-    ip_str = random.choice(RANDOM_IP_POOL)
-    for k in range(1, random.randint(2, 15)):  # 给这些网站生成随机的时间内的数据
-        randomtime = data_time + random.randint(-604800, 0)
-        rank_str = ''
-        for ip in range(random.randint(10, 40)):  # 生成随机时间内的ip
-            rank_str += '    "' + getRandomIP(ip_str) + '":' + str(random.randint(100, 5000)) + ',\n'
-        rank_str = rank_str[:-2] + '\n'
-        json = '{"name":"' + randomweb + ':ip",\n"time":' + str(
-            randomtime) + ',\n"rank":{\n' + rank_str + '}}\n\n'
-        addip(json)
-        webdata.write(json)
-    webdata.close()
+for name in words:
+    for ip_str in ip:
+        for timeDelta in timestamp:
+            time = data_time - timeDelta
+            for score in range(1, 20):
+                rank_str = '    "' + ip_str + '":' + str(score) + ',\n'
+                rank_str = rank_str[:-2] + '\n'
+                json = '{"name":"' + name + ':ip",\n"time":' + str(
+                    time) + ',\n"rank":{\n' + rank_str + '}}\n\n'
+                addip(json)

@@ -10753,11 +10753,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	     * @example
 	     *     graphic.updateProps(el, {
 	     *         position: [100, 100]
-	     *     }, seriesModel, dataIndex, function () { console.log('Animation done!'); });
+	     *     }, seriesModel, dataIndex, function () { console.logger('Animation done!'); });
 	     *     // Or
 	     *     graphic.updateProps(el, {
 	     *         position: [100, 100]
-	     *     }, seriesModel, function () { console.log('Animation done!'); });
+	     *     }, seriesModel, function () { console.logger('Animation done!'); });
 	     */
 	    graphic.updateProps = function (el, props, animatableModel, dataIndex, cb) {
 	        animateOrSetProps(true, el, props, animatableModel, dataIndex, cb);
@@ -13456,7 +13456,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            out[0] = cubicAt(x0, x1, x2, x3, t);
 	            out[1] = cubicAt(y0, y1, y2, y3, t);
 	        }
-	        // console.log(interval, i);
+	        // console.logger(interval, i);
 	        return mathSqrt(d);
 	    }
 
@@ -13650,7 +13650,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            out[0] = quadraticAt(x0, x1, x2, t);
 	            out[1] = quadraticAt(y0, y1, y2, t);
 	        }
-	        // console.log(interval, i);
+	        // console.logger(interval, i);
 	        return mathSqrt(d);
 	    }
 
@@ -24760,7 +24760,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    );
 	                case 'value':
 	                    return new IntervalScale();
-	                // Extended scale, like time and log
+	                // Extended scale, like time and logger
 	                default:
 	                    return (Scale.getClass(axisType) || IntervalScale).create(model);
 	            }
@@ -25040,7 +25040,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var extent = this._extent;
 	        other[0] < extent[0] && (extent[0] = other[0]);
 	        other[1] > extent[1] && (extent[1] = other[1]);
-	        // not setExtent because in log axis it may transformed to power
+	        // not setExtent because in logger axis it may transformed to power
 	        // this.setExtent(extent[0], extent[1]);
 	    };
 
@@ -25866,7 +25866,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = axisType || 'value';
@@ -29802,7 +29802,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = 'value';
@@ -40770,7 +40770,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = axisType || 'value';
@@ -49059,7 +49059,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = 'category';
@@ -49100,7 +49100,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = 'category';
@@ -50250,7 +50250,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         * - 'category'
 	         * - 'value'
 	         * - 'time'
-	         * - 'log'
+	         * - 'logger'
 	         * @type {string}
 	         */
 	        this.type = axisType || 'value';
@@ -54881,7 +54881,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 	            });
 
-	            // console.log(JSON.stringify(visualMetaList.map(a => a.stops)));
+	            // console.logger(JSON.stringify(visualMetaList.map(a => a.stops)));
 	            seriesModel.getData().setVisual('visualMeta', visualMetaList);
 	        });
 	    }
@@ -57269,7 +57269,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                curr = interval[lg];
 	            }
 	        }
-	        // console.log(JSON.stringify(pieceList.map(a => a.interval)));
+	        // console.logger(JSON.stringify(pieceList.map(a => a.interval)));
 
 	        function littleThan(piece, standard, lg) {
 	            lg = lg || 0;
@@ -60121,7 +60121,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  - 'category'
 	         *  - 'value'
 	         *  - 'time'
-	         *  - 'log'
+	         *  - 'logger'
 	         * @type {string}
 	         */
 	        this.type = axisType || 'value';

@@ -12,7 +12,12 @@ function dumpToWeb(array $arr)
     echo ']';
 }
 
-$rankData = new IPRank();
+try {
+    $rankData = new IPRank();
+} catch (Exception $e) {
+    echo '{"error":' . $e->getMessage() . '}';
+    return;
+}
 
 if (isset($_POST['name'])
     && isset($_POST['create_time'])
@@ -21,7 +26,7 @@ if (isset($_POST['name'])
     $_POST['table'] = preg_replace('/[\x00-\x1F]/', '', $_POST['table']);
     $rank = json_decode($_POST['table']);
     if ($rank == null) {
-        echo "{status' :'data format error}" . "\n";
+        echo "{status :'data format error'}" . "\n";
         echo "POST string:\n<br/>";
         dumpToWeb($_POST);
         return;
@@ -34,7 +39,7 @@ if (isset($_POST['name'])
     $_GET['table'] = preg_replace('/[\x00-\x1F]/', '', $_GET['table']);
     $rank = json_decode($_GET['table']);
     if ($rank == null) {
-        echo "{status' :'data format error}" . "\n";
+        echo '{status :"data format error"}' . "\n";
         echo "GET string:\n<br/>";
         dumpToWeb($_GET);
         return;
@@ -42,14 +47,21 @@ if (isset($_POST['name'])
     $data = array('name' => $_GET['name'], 'time' => $_GET['create_time'], 'rank' => (array)$rank);
 } else if (isset($_POST['data'])) {
     $_POST['data'] = preg_replace('/[\x00-\x1F]/', '', $_POST['data']);
-    $data = json_decode($_POST['data']);
+    $json = json_decode($_POST['data']);
+    $data = array('name' => $json->name, 'time' => $json->time, 'rank' => (array)($json->rank));
 } else {
-    echo "{status' :'data format error}" . "\n";
+    echo '{status :"data format error"}' . "\n";
     return;
 }
 
 $rankData->set($data);
-$queryClient = new rankQuery();
+try {
+    $queryClient = new rankQuery();
+} catch (Exception $e) {
+    echo '{"error":' . $e->getMessage() . '}';
+    return;
+}
+
 try {
     $ok = $queryClient->addRank($rankData);
     $ret = array('status' => $ok);
@@ -57,4 +69,3 @@ try {
     $ret = array('status' => 'Exception: ' . $e->getMessage());
 }
 echo json_encode($ret);
-?>

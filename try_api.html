@@ -4,224 +4,37 @@
     <meta charset="UTF-8">
     <title>try json</title>
     <style type="text/css">
-        #hostlist {
+        .hostlist {
             display: inline-block;
             float: left;
             width: 300px;
-            height: 900px;
+            min-height: 900px;
             border: 1px solid red;
             margin-left: 10px;
+            margin-bottom: 30px;
             padding: 10px;
         }
+
+        .result {
+            padding: 10px;
+            float: left;
+            width: 300px;
+            min-height: 900px;
+            border: solid rosybrown 2px;
+        }
     </style>
-    <script src="static/js/jquery.min.js"></script>
-    <script type="application/javascript">
-        var ipdata = {
-            "name": "foo_name",
-            "time": '',
-            "rank": {
-                "A192.168.1.1": 12,
-                "B172.15.1.125": 56,
-                'C172.16.123.18': 10000,
-                'D114.114.114.114': 4
-            }
-        };
-        function addip() {
-            ipdata['time'] = Date.now() / 1000;
-            ipdata['name'] = $('#name').val();
-//            ipdata.range.start = $('start').val();
-//            ipdata.range.stop = $('stop').val();
-            $.ajax({
-                url: "add.php",
-                type: "post",
-                dataType: "json",
-                data: {data: JSON.stringify(ipdata)},
-                success: function (data) {
-                    $('#result').append('<br>status:' + data['status'] + '</<br>');
-                },
-                error: function (data) {
-                    $('#result').append('<br>status:' + data['status'] + '</<br>');
-                }
-            })
-        }
-
-
-        function getaddip() {
-            $.ajax({
-                url: "add.php",
-                type: "post",
-                dataType: "json",
-                data: {
-                    'name': 'log_ip',
-                    'create_time': 12312312,
-
-                    'table': '{" 1.198.35.100 ": 1," 180.175.109.74 ": 4'
-                },
-                success: function (data) {
-                    $('#result').append('<br>status:' + data['status'] + '</br>');
-                },
-                error: function (data) {
-                    $('#result').append('<br>status:' + data['status'] + '</br>');
-                }
-            });
-
-//            $.post('add.php','create_time=1470383507&name=log_ip&table={"101.71.37.160 ":1," 217.69.128.184 ":4," 136.167.36.74 ":1," 101.93.68.225 ":1," 36.250.86.198 ":1," 117.176.255.201 ":1}')
-        }
-        var query_param = {
-            'name': 'foo_name',
-            //指定范围,这里查询全部范围
-            'start': 0,
-            'stop': -1,
-            //带不带分数的查询
-            withScores: true,
-            withTime: true,
-            byScore: false
-        };
-
-        function querybyname() {
-            query_param['name'] = $('#name').val();
-            query_param.start = $('#start').val();
-            query_param.stop = $('#stop').val();
-            query_param.withScores = $('input[name=withScores]').is(':checked');
-            query_param.withTime = $('input[name=withTime]').is(':checked');
-            $.ajax({
-                url: 'query.php?method=queryRankByName',
-                type: 'post',
-                dataType: 'json',
-                data: {data: JSON.stringify(query_param)},
-                success: function (data) {
-                    var html = 'name:' + data['name'] +
-                            '<br>create time:' + data['createTime'];
-//                    document.write(html);
-                    $('#result').find('ol').append('<li>' + html + '</li>');
-                    var rank = data['Rank'];
-                    if (query_param.withTime && query_param.withScores) {
-                        for (var ip in rank) {
-                            $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip][0] + 'time: ' + new Date(rank[ip][1] * 1000).toString() + '</li>');
-                        }
-                    } else if (query_param.withScores) {
-                        for (var ip in rank) {
-                            $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip] + '</li>');
-                        }
-                    } else if (query_param.withTime) {
-                        for (var ip in rank) {
-                            $('#result').find('ol').append('<li>ip:' + ip + 'time:' + new Date(rank[ip] * 1000).toString() + '</li>');
-                        }
-                    } else {
-                        for (var ip in rank) {
-                            $('#result').find('ol').append('<li>ip:' + rank[ip] + '</li>');
-                        }
-                    }
-
-                },
-                error: function (data) {
-                    document.write('query failed!');
-                }
-            })
-        }
-
-        var query_param_by_timeinterval = {
-            'name': 'foo_name',
-            start: 0,
-            stop: 0,
-            withScores: true,
-            withTime: false
-        };
-
-        function querybytimeinterval() {
-//            query_param_by_timeinterval['range']['stop'] = Date.now();
-//            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
-            query_param_by_timeinterval['name'] = $('#name').val();
-            query_param_by_timeinterval.start = $('#start').val();
-            query_param_by_timeinterval.stop = $('#stop').val();
-            query_param_by_timeinterval.count = $('#queryCount').val();
-            $.ajax({
-                url: 'query.php?method=queryRankByTimeInterval',
-                type: 'post',
-                dataType: 'json',
-                data: {data: JSON.stringify(query_param_by_timeinterval)},
-                success: function (data) {
-                    var html = 'name: ' + data['name'] + '<br>create time: ' + data['createTime'];
-                    $('#result').find('ol').append('<li>' + html + '</li>');
-                    var ipRank = data['Rank'];
-                    for (var ip in ipRank) {
-                        $('#result').find('ol').append('<li>ip: ' + ip + ' rank: ' + ipRank[ip] + '</li>');
-                    }
-                },
-                error: function (data) {
-                    document.write('query failed!');
-                }
-            })
-        }
-        var del_param = {
-            name: 'foo_name'
-        };
-
-
-        function deletebyname() {
-            del_param['name'] = $('#name').val();
-            $.ajax({
-                url: 'delete.php',
-                type: 'post',
-                dataType: 'json',
-                data: {data: JSON.stringify(del_param)},
-                success: function (data) {
-                    var html = '<br>name: ' + data['name'] + ' deleted count: ' + data['count'] + '</<br>';
-                    $('#result').append(html);
-                }
-            })
-        }
-        function clearresult() {
-            var resdiv = $('#result').empty();
-            resdiv.append('<ol></ol>')
-        }
-        function getnamelist() {
-            $('#hostlist').find('ol').empty();
-            var query_name_para = {
-                name: '',
-                count: ''
-            };
-            query_name_para.name = $('#namePattern').val();
-            query_name_para.count = $('#queryCount').val();
-            $.ajax({
-                url: 'query.php?method=getNameList',
-                type: 'post',
-                dataType: 'json',
-                data: {data: JSON.stringify(query_name_para)},
-                success: function (data) {
-                    for (var name in data) {
-                        $('#hostlist').find('ol').append('<li>' + data[name] + '</li>');
-                    }
-                },
-                error: function (data) {
-                    $('#hostlist').find('ol').append('<br>query name error</br>');
-                }
-            })
-        }
-
-        function queryTimeRangeByName(name) {
-            $.ajax({
-                url: 'methodSwitch.php?method=queryTimeRange&name=' + name,
-                type: 'post',
-                data: {data: ''},
-                success: function (data) {
-                    return data
-                },
-                error: function (data) {
-                    return false;
-                }
-            })
-        }
-    </script>
 </head>
 <body>
-<div style="float:left;display:inline-block;">
+<div style="float:left;display:inline-block;margin: 10px">
 
     <button onclick="clearresult()">clear result</button>
     <br>
-    <button onclick="addip()" value="">try_add</button>
+    <button onclick="addrank()" value="">try_add</button>
+    <br>
+    <button onclick="queryRankByName2()" value="">try queryRankByName2</button>
     <br>
     <button onclick="querybyname()">try_query_by_name</button>
+    <br>
     <input type="checkbox" name="withScores" value="true" checked="checked">withScores
     <input type="checkbox" name="withTime" value="true">withTime
     <br>
@@ -231,19 +44,336 @@
     <br>
     <button onclick="getaddip()">try get add</button>
     <br>
-    hostname<input id="name" type="text" value="foo_name"/><br>
-    unix timestamp/rank start at:<input id="start" type="text" value="0"><br>
-    unix timestamp/rank stop at:<input id="stop" type="text" value="-1"><br>
-    <div id="result">
-        <ol>
-        </ol>
+    <button onclick="downloadDenyList()">try DownloadDenyList</button>
+    <br>
+    <button onclick="downloadFormattedDenyList()">try dowloadFormattedDenyList</button>
+    <br>
+    <button onclick="downloadFormattedWhiteList()">downloadFormattedWhiteList</button>
+    name<input id="name" type="text" value="foo_name"/><br>
+    rank start at:<input id="start" type="text" value="0"><br>
+    rank stop at:<input id="stop" type="text" value="10"><br>
+    policy:<select id="policy"></select><br>
+    <div style="display:inline-block;float:left;margin-top:5px;">
+        <label>start unix timestamp</label>
+        <p class="datep"><input class="datainp" id="startTime" type="text" value="-1"></p>
+        <label>stop unix timestamp</label>
+        <p class="datep"><input class="datainp" id="stopTime" type="text" value="-1"></p>
+        <p class="datep">
+            <input style="width:268px;text-align:center;" class="datainp" id="startTimeBtn" type="text"
+                   placeholder="选择开始时间"
+                   readonly>
+        </p>
+        <p class="datep">
+            <input style="width:268px;text-align:center; margin-top: 10px" class="datainp" id="stopTimeBtn" type="text"
+                   placeholder="选择结束时间"
+                   readonly>
+        </p>
+    </div>
+    <div style="margin-top: 10px">
+        <label>rank/score json:</label>
+        <textarea name="rank" id="rankText" style="display: inline-block;;height: 300px;width: 300px;float: left;">{"A192.168.1.1": 12,"B172.15.1.125": 56,"C172.16.123.18": 10000,"D114.114.114.114": 4}</textarea>
     </div>
 </div>
-<div id="hostlist">
+<div id="hostlist" class="hostlist">
     <button onclick="getnamelist()">query name list</button>
     pattern: <input id="namePattern" type="text" value="*">
     count:<input id="queryCount" type="text" value="10">
     <ol></ol>
 </div>
+<div id="result" class="result">
+    <ol>
+    </ol>
+</div>
 </body>
+<script src="static/js/jquery.min.js"></script>
+<script type="application/javascript">
+    var ipdata = {
+        "name": "foo_name",
+        "time": '',
+        "rank": {
+            "A192.168.1.1": 12,
+            "B172.15.1.125": 56,
+            'C172.16.123.18': 10000,
+            'D114.114.114.114': 4
+        }
+    };
+    function addip() {
+        ipdata['time'] = Date.now() / 1000;
+        ipdata['name'] = $('#name').val();
+//            ipdata.range.start = $('start').val();
+//            ipdata.range.stop = $('stop').val();
+        $.ajax({
+            url: "add.php",
+            type: "post",
+            dataType: "json",
+            data: {data: JSON.stringify(ipdata)},
+            success: function (data) {
+                $('#result').append('<br>status:' + data['status'] + '<br>');
+            },
+            error: function (data) {
+                $('#result').append('<br>status:' + data['status'] + '<br>');
+            }
+        })
+    }
+
+    function addrank() {
+        var start = $('#startTime').val();
+        var name = $('#name').val();
+        var rank = $('#rankText').val();
+        var posting = $.post('add.php', {'name': name, 'create_time': start, 'table': rank});
+        posting.done(function (data) {
+            $('#result').append('status:' + data['status'] + '<br>');
+        })
+    }
+
+    function queryRankByName2() {
+        query_param['name'] = $('#name').val();
+        query_param.start = $('#start').val();
+        query_param.stop = $('#stop').val();
+        query_param.policy = $('#policy').val();
+
+        var posting = $.post('query.php?method=queryRankByName2', {data: JSON.stringify(query_param)});
+        posting.done(function (data) {
+            $('#result').append('name: ' + data.name + ' ,time' + data.time + '<br>');
+
+            for (var rank in data.rank) {
+                $('#result').append('key -> ' + rank + ' ,score -> ' + data.rank[rank] + '<br>');
+            }
+        })
+    }
+
+    function getaddip() {
+        $.ajax({
+            url: "add.php",
+            type: "post",
+            dataType: "json",
+            data: {
+                'name': 'log_ip',
+                'create_time': Date.now() / 1000,
+                'table': '{" 1.198.35.100 ": 1," 180.175.109.74 ": 4}'
+            },
+            success: function (data) {
+                $('#result').append('<br>status:' + data['status'] + '</br>');
+            },
+            error: function (data) {
+                $('#result').append('<br>status:' + data['status'] + '</br>');
+            }
+        });
+
+//            $.post('add.php','create_time=1470383507&name=log_ip&table={"101.71.37.160 ":1," 217.69.128.184 ":4," 136.167.36.74 ":1," 101.93.68.225 ":1," 36.250.86.198 ":1," 117.176.255.201 ":1}')
+    }
+    var query_param = {
+        'name': 'foo_name',
+        //指定范围,这里查询全部范围
+        'start': 0,
+        'stop': -1,
+        //带不带分数的查询
+        withScores: true,
+        withTime: true,
+        byScore: false
+    };
+
+    function querybyname() {
+        query_param['name'] = $('#name').val();
+        query_param.start = $('#start').val();
+        query_param.stop = $('#stop').val();
+        query_param.withScores = $('input[name=withScores]').is(':checked');
+        query_param.withTime = $('input[name=withTime]').is(':checked');
+        $.ajax({
+            url: 'query.php?method=queryRankByName',
+            type: 'post',
+            dataType: 'json',
+            data: {data: JSON.stringify(query_param)},
+            success: function (data) {
+                var html = 'name:' + data['name'] +
+                        '<br>create time:' + data['time'];
+//                    document.write(html);
+                $('#result').find('ol').append('<li>' + html + '</li>');
+                var rank = data['Rank'];
+                if (query_param.withTime && query_param.withScores) {
+                    for (var ip in rank) {
+                        $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip][0] + 'time: ' + new Date(rank[ip][1] * 1000).toString() + '</li>');
+                    }
+                } else if (query_param.withScores) {
+                    for (var ip in rank) {
+                        $('#result').find('ol').append('<li>ip:' + ip + ' score:' + rank[ip] + '</li>');
+                    }
+                } else if (query_param.withTime) {
+                    for (var ip in rank) {
+                        $('#result').find('ol').append('<li>ip:' + ip + 'time:' + new Date(rank[ip] * 1000).toString() + '</li>');
+                    }
+                } else {
+                    for (var ip in rank) {
+                        $('#result').find('ol').append('<li>ip:' + rank[ip] + '</li>');
+                    }
+                }
+
+            },
+            error: function (data) {
+                document.write('query failed!');
+            }
+        })
+    }
+
+    var query_param_by_timeinterval = {
+        'name': 'foo_name',
+        start: 0,
+        stop: 0,
+        withScores: true,
+        withTime: false
+    };
+
+    function querybytimeinterval() {
+//            query_param_by_timeinterval['range']['stop'] = Date.now();
+//            query_param_by_timeinterval['range']['start'] = Date.now() - 10 * 1000;//查询最近10s添加的数据
+        query_param_by_timeinterval['name'] = $('#name').val();
+        query_param_by_timeinterval.start = $('#startTime').val();
+        query_param_by_timeinterval.stop = $('#stopTime').val();
+        query_param_by_timeinterval.count = $('#queryCount').val();
+        $.ajax({
+            url: 'query.php?method=queryRankByTimeInterval',
+            type: 'post',
+            dataType: 'json',
+            data: {data: JSON.stringify(query_param_by_timeinterval)},
+            success: function (data) {
+                var html = 'name: ' + data['name'] + '<br>create time: ' + data['time'];
+                $('#result').find('ol').append('<li>' + html + '</li>');
+                var ipRank = data['Rank'];
+                for (var ip in ipRank) {
+                    $('#result').find('ol').append('<li>ip: ' + ip + ' rank: ' + ipRank[ip] + '</li>');
+                }
+            },
+            error: function (data) {
+                document.write('query failed!');
+            }
+        })
+    }
+    var del_param = {
+        name: 'foo_name'
+    };
+
+
+    function deletebyname() {
+        del_param['name'] = $('#name').val();
+        $.ajax({
+            url: 'delete.php',
+            type: 'post',
+            dataType: 'json',
+            data: {data: JSON.stringify(del_param)},
+            success: function (data) {
+                var html = '<br>name: ' + data['name'] + ' deleted count: ' + data['count'] + '</<br>';
+                $('#result').append(html);
+            }
+        })
+    }
+    function clearresult() {
+        var resdiv = $('#result').empty();
+        resdiv.append('<ol></ol>')
+    }
+    function getnamelist() {
+        $('#hostlist').find('ol').empty();
+        var query_name_para = {
+            name: '',
+            count: ''
+        };
+        query_name_para.name = $('#namePattern').val();
+        query_name_para.count = $('#queryCount').val();
+        $.ajax({
+            url: 'query.php?method=getNameList',
+            type: 'post',
+            dataType: 'json',
+            data: {data: JSON.stringify(query_name_para)},
+            success: function (data) {
+                for (var name in data) {
+                    $('#hostlist').find('ol').append('<li>' + data[name] + '</li>');
+                }
+            },
+            error: function (data) {
+                $('#hostlist').find('ol').append('<br>query name error</br>');
+            }
+        })
+    }
+
+    gotPolicyList = $.get('query.php?method=getPolicyList');
+    gotPolicyList.done(function (data) {
+        for (var p in data) {
+            $('#policy').append('<option value="' + data[p] + '">' + data[p] + '</option>')
+        }
+    });
+
+    function return2Br(str) {
+        return str.replace(/\r?\n/g, "<br />");
+    }
+
+    function downloadFormattedDenyList() {
+        var name = $('#name').val();
+        var url = 'query.php?method=fetchFormattedDenyList&service_name=' + name;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'text',
+            success: function (data) {
+                $('#result').append(return2Br(data));
+            }
+        })
+    }
+
+    function downloadDenyList() {
+        var name = $('#name').val();
+        var url = 'query.php?method=fetchDenyList&name=' + name;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'text',
+            success: function (data) {
+                $('#result').append(data);
+            }
+        })
+    }
+
+    function downloadFormattedWhiteList() {
+        var name = $('#name').val();
+        var url = 'query.php?method=fetchFormattedWhiteList&name=' + name;
+        $.ajax({
+            url: url,
+            type: 'get',
+            dataType: 'text',
+            success: function (data) {
+                $('#result').append(return2Br(data));
+            }
+        })
+    }
+</script>
+<script type="text/javascript" src="static/jedate/jedate.js"></script>
+<script type="text/javascript">
+    jeDate({
+        dateCell: "#stopTimeBtn",
+        format: "YYYY-MM-DD hh:mm:ss",
+        isinitVal: false,
+        isTime: true, //isClear:false,
+        okfun: function (val) {
+            $('#stopTime').val(Date.parse(val) / 1000);
+        },
+        choosefun: function (val) {
+            $('#stopTime').val(Date.parse(val) / 1000);
+        },
+        clearfun: function (val) {
+            $('#stopTime').val(-1);
+        }
+    });
+    jeDate({
+        dateCell: "#startTimeBtn",
+        format: "YYYY-MM-DD hh:mm:ss",
+        isinitVal: false,
+        isTime: true, //isClear:false,
+        okfun: function (val) {
+            $('#startTime').val(Date.parse(val) / 1000);
+        },
+        choosefun: function (val) {
+            $('#startTime').val(Date.parse(val) / 1000);
+        }, clearfun: function (val) {
+            $('#startTime').val(-1)
+        }
+    });
+</script>
 </html>

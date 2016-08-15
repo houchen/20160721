@@ -7,43 +7,36 @@
  */
 require_once('config.php');
 require_once('model/status.php');
+date_default_timezone_set('Asia/Shanghai');
+require_once('deps/logger/psr/Log/LoggerInterface.php');
+require_once 'deps/logger/psr/Log/AbstractLogger.php';
+require_once 'deps/logger/psr/Log/LogLevel.php';
+require_once('deps/logger/klogger/Logger.php');
 
-
-//dbs
-define('RankDB', 0);
-define('InfoDB', 1);
-define('TimeDB', 2);
-define('UnionDB', 3);
-define('LatestUpdateDB', 4);
 
 //keys
-define('nameIDKey', 'id:hash');//name与id对应关系的哈希表key,该key在InfoDB中
-define('nameCounter', 'name:counter');//生成name对应id的计数器
-define('logCounter', 'log:counter');
-define('TMPZUnionKey', 'tmpUnion:set');
+define('POLICY_CONF', 'policyConfig.json');
+define('LOG_LEVEL', Psr\Log\LogLevel::DEBUG);
 
+define('rankDB', 5);
+define('LOG_PATH', './logs');
 
 class rankQuery
 {
     private $_redisConn = null;
+    private $policy;
+    private static $logger = null;
 
     public function __construct()
     {
-        //todo:检查cookie中是否有可用redis连接?
-        //redis连接可以保存到cookie中吗?
-//        if (!$this->_redisConn) {
-//            if (isset($_COOKIE['redisConn'])) {
-//                $this->_redisConn = $_COOKIE['redisConn'];
-//            } else {
-//                $this->_redisConn = new Redis();
-//                $this->_redisConn->connect(redisAddr, redisPort);
-//                setcookie('redisConn',$this->_redisConn,time()+86400,'/');
-//            }
-//        }
         if ($this->_redisConn == null) {
             $this->_redisConn = new Redis();
             $this->_redisConn->connect(redisAddr, redisPort);
         }
+        if (self::$logger == null) {
+            self::$logger = new Katzgrau\KLogger\Logger(LOG_PATH, LOG_LEVEL);
+        }
+        $this->loadPolicy(POLICY_CONF);
     }
 
     public function __destruct()
@@ -53,24 +46,69 @@ class rankQuery
         }
     }
 
+    public function loadPolicy($policyFile)
+    {
+        $policyStr = file_get_contents($policyFile);
+        $this->policy = json_decode($policyStr);
+        if ($this->policy == null) {
+            throw new Exception('decode policy config error');
+        } else {
+            return status::OK;
+        }
+    }
+
     private function selectDB($db)
     {
-        static $currDB = 0;
+        static $currDB = -1;
         if ($currDB != $db) {
             $this->_redisConn->select($db);
             $currDB = $db;
         }
     }
 
-    private function getNameID($name)
+    public function getPolicyList()
     {
-        $this->selectDB(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false) {
-            return null;
-        } else {
-            return $nameID;
-        }
+        return $this->policy;
+    }
+
+    private function rankByTimeKey($name, $policy, $key)
+    {
+        return $name . ':' . $policy->time . ':rank:' . $key . ':zsort';
+    }
+
+    private function rankByScoreKey($name, $policy)
+    {
+        return $name . ':' . $policy->time . ':rank:zsort';
+    }
+
+    private function policyTimerKey($name, $policy)
+    {
+        return $name . ':' . $policy->time . ':reRankUpdate:timer';
+    }
+
+    private function whiteListKey()
+    {
+        return 'whiteList:set';
+    }
+
+    private function nameSetKey()
+    {
+        return 'allName:set';
+    }
+
+    private function denyListKey($name, $policy)
+    {
+        return $name . ':' . $policy->time . ':deny:set';
+    }
+
+    private function denyListUpdateTimer($name, $policy)
+    {
+        return $name . ':' . $policy->time . ':denyUpdate:timer';
+    }
+
+    private function touchLimitTimestampKey($name, $policy)
+    {
+        return $name . ':' . $policy->time . ':touchLimitTimestamp:hash';
     }
 
     private function checkTime($rank)
@@ -78,270 +116,359 @@ class rankQuery
         $rankTime = new ReflectionObject($rank);
         if ($rankTime->hasMethod('time')) {
             return $rank->time();
+        } else if ($rankTime->hasProperty('time')) {
+            return $rank->time;
         } else {
             return time();
         }
     }
-    //给每个name对应的rank加上最后一次更新时间
-    //fixme:还没有完成,需不需要这个功能?
-    private function associateRankTime($nameID, &$ranks, $withScore)
+
+    private function scoreSum($scoreArray)
     {
-        throw new Exception('not implement:associateRankTime');
-        $ranksAndTime = array();
-        $this->selectDB(LatestUpdateDB);
-        if ($withScore) {
-            $timeList = $this->_redisConn->hMGet($nameID, array_keys($ranks));
-            foreach ($ranks as $key => $score) {
-                $ranksAndTime[$key] = array($score, $timeList[$key]);
+        $sum = 0;
+        foreach ($scoreArray as $sa) {
+            $j = json_decode($sa);
+            $sum += $j->score;
+        }
+        return $sum;
+    }
+
+    //重新排名,并在必要的时候回收时间排名队列,删除相应的数据和纪录
+    private function doReRank($name, $policy)
+    {
+        $this->selectDB(rankDB);
+        $reRankKey = $this->rankByScoreKey($name, $policy);
+        self::$logger->info('reRank key: ' . $reRankKey);
+        $allSortedRank = $this->_redisConn->zRange($reRankKey, 0, -1);
+        if (count($allSortedRank) <= 0) {
+            self::$logger->warning('no members to reRank,key= ' . $reRankKey);
+        } else if ($allSortedRank == false) {
+            //todo:reRank键为空需要被删除,这里就会返回false
+            return;
+        }
+        $trimTimeLimit = time() - $policy->time;
+        //遍历每一个排名成员,给他们减分
+        foreach ($allSortedRank as $member) {
+            $minusKey = $this->rankByTimeKey($name, $policy, $member);
+            //查找在policy->time之前时间的所有纪录,把它们按分数求和,然后把这些过期的纪录删除
+            $decrementSumScore = $this->_redisConn->zRangeByScore($minusKey, '-inf', $trimTimeLimit);
+            $decrSum = -1 * $this->scoreSum($decrementSumScore);
+            if ($decrSum == 0) {
+                self::$logger->debug('decrSum=0,reRank needless');
+                continue;
             }
-        } else {
-            $timeList = $this->_redisConn->hMGet($nameID, $ranks);
-            foreach ($ranks as $key) {
-                $ranksAndTime[$key] = $timeList[$key];
+            //减去过期的元素
+            $newVal = $this->_redisConn->zIncrBy($reRankKey, $decrSum, $member);
+            self::$logger->debug('decrease to ' . $newVal .
+                ', decrease total: ' . -1 * $decrSum .
+                ', trim time limit: ' . $trimTimeLimit .
+                '(' . date('Y-m-d H:i:s', $trimTimeLimit) . ')');
+            $this->_redisConn->zRemRangeByScore($minusKey, '-inf', $trimTimeLimit);
+            //主要做两步检查:1.分数为0的时候,检查对应的按时间排名的集合是否为空;2.反之,时间排名集合为空,分数是否为0
+            //在分数被减到阀值以下时,对纪录超过阀值时间点的hash表进行更新,为下次超过阀值纪录做准备
+            if ($newVal == 0) {
+                $this->_redisConn->zRem($reRankKey, $member);
+                self::$logger->info('member: ' . $member . ' removed from ' . $reRankKey);
+                //当新值为0,则minusKey也应该没有元素
+                if (($card = $this->_redisConn->zCard($minusKey)) == 0) {
+                    $this->_redisConn->del($minusKey);
+                    self::$logger->info('key: ' . $minusKey . ' deleted');
+                    continue;
+                } else {
+                    //新排名分数已经为0,但是相应的时间排名列表还不为空
+                    $this->_redisConn->del($minusKey);
+                    self::$logger->error('rank is not consistent! minus key deleted members incorrect.' .
+                        'reRankKey: ' . $reRankKey .
+                        " ,member: " . $member .
+                        " ,minus key: " . $minusKey .
+                        " ,minusKey card:" . $card);
+                }
+            } else if ($newVal < 0) {
+                //分值在正确的情况下不可能减成负的
+                $this->_redisConn->zRem($reRankKey, $member);
+                $this->_redisConn->del($minusKey);
+                self::$logger->error("rank incorrect!decr to negative! reRankKey: " . $reRankKey .
+                    " ,member: " . $member .
+                    " ,minus key: " . $minusKey .
+                    " ,newVal: " . $newVal);
+            } else if ($newVal > 0
+                && $newVal < $policy->score
+                && $decrSum + $newVal >= $policy->score
+            ) {
+                //member 曾经超过阀值,并且这轮重新排名后分数减少到阀值以下,删除它达到阀值的时间点
+                $ret = $this->_redisConn->hDel($this->touchLimitTimestampKey($name, $policy), $member);
+                if ($ret == false || $ret == 0) {
+                    self::$logger->error('member: ' . $member .
+                        ' decreasingly less than score limit: ' . $policy->score .
+                        '. But delete touch limit timestamp error. new score= ' . $newVal .
+                        ' ,ret=' . $ret);
+                } else {
+                    self::$logger->info('member: ' . $member . ' touch limit timestamp has been removed from ' .
+                        $this->touchLimitTimestampKey($name, $policy) . ', new score= ' . $newVal .
+                        ', policy score: ' . $policy->score);
+                }
+            }
+            if ($this->_redisConn->zCard($minusKey) == 0) {
+                self::$logger->info('key : ' . $minusKey . ' has been deleted');
+                //如果minusKey已经没有元素,则该member对应的分数应该为0
+                if ($newVal == 0) {
+                    //减去之后,排名集合中新的分数为0
+                    $this->_redisConn->zRem($reRankKey, $member);
+                    self::$logger->info('member: ' . $member . ' removed from: ' . $reRankKey);
+                    continue;
+                } else {
+                    //对应的时间排序列表已经为空,但是分数还不为0
+                    $this->_redisConn->zRem($reRankKey, $member);
+                    self::$logger->error("sorted rank incorrect! reRankKey: " . $reRankKey .
+                        " ,member: " . $member .
+                        " ,minus key: " . $minusKey .
+                        " ,score: " . $newVal);
+                }
             }
         }
-        return $ranksAndTime;
+        //该name在策略下的排名都被删除完时,这是reRankKey已经不存在了。等待下一次查询排名的时候,在name集合中删除该name
+    }
+
+    private function reRankIfNecessary($name, $policy)
+    {
+        $timerKey = $this->policyTimerKey($name, $policy);
+        if ($this->_redisConn->exists($timerKey)) {
+            return;
+        } else {
+            $this->doReRank($name, $policy);
+            $this->_redisConn->set($timerKey, '1');
+//            $this->_redisConn->expire($timerKey, sqrt($policy->time));
+            $this->_redisConn->expire($timerKey, 1);
+        }
+    }
+
+
+    private function doAddRank($name, $time, $rankArr, $policy)
+    {
+        foreach ($rankArr as $member => $score) {
+            //按time排名
+            $rankKey = $this->rankByTimeKey($name, $policy, $member);
+            //这里的value是分数喝时间的混合,因为一次过来的数据,可能有很多相同的分数
+            $memberJSON = json_encode(array('score' => $score, 'member' => $member, 'time' => $time));
+            if (($ret = $this->_redisConn->zIncrBy($rankKey, $time, $memberJSON)) != $time) {
+                //在一个时间点上,有两个相同的ip/key分数
+                self::$logger->error("add key at same time, key: " . $rankKey .
+                    ' ,redis add return: ' . $ret .
+                    ' ,member: ' . $memberJSON);
+            }
+        }
+        $rankKey = $this->rankByScoreKey($name, $policy);
+        foreach ($rankArr as $member => $score) {
+            //按score排名
+            if (($ret = $this->_redisConn->zIncrBy($rankKey, $score, $member)) == $score) {
+                self::$logger->info("add new member in rank ,key: " . $rankKey .
+                    " ,redis add return: " . $ret .
+                    ' ,member: ' . $member);
+            }
+            //纪录score达到阀值的时间,只在第一次达到的时候才纪录(分数可能继续上涨)
+            if ($ret >= $policy->score) {
+                $this->_redisConn->hSetNx($this->touchLimitTimestampKey($name, $policy), $member, $time);
+            }
+        }
     }
 
     public function addRank(IPRank $rank)
     {
-        //查找名字的ID,或者添加新的名字
-        $this->selectDB(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $rank->name);
-        if ($nameID == false) {
-            $nameID = $this->_redisConn->incr(nameCounter);
-            $this->_redisConn->hSet(nameIDKey, $rank->name, $nameID);
-        }
-
-        //计算排名更新的时间
-        $logID = $this->_redisConn->incr(logCounter);
+        $this->selectDB(rankDB);
         $time = $this->checkTime($rank);
-
-        //添加时间序列
-        $this->selectDB(TimeDB);
-        $this->_redisConn->zAdd($nameID, $time, $logID);
-
-        //更新总时段排名
-        $this->selectDB(UnionDB);
-        $scores = $rank->rank;
-        if (is_array($scores)) {
-            foreach ($scores as $key => $score) {
-                $this->_redisConn->zIncrBy($nameID, $score, $key);
-            }
-        } else {
-            throw  new Exception('illegal ranks');
+        self::$logger->info('add rank,name: ' . $rank->name);
+        foreach ($this->policy as $p) {
+            $this->doAddRank($rank->name, $time, $rank->rank, $p);
+            $this->reRankIfNecessary($rank->name, $p);
+            $this->tryUpdateDenyList($rank->name, $p);
         }
-
-        //更新分时段排名
-        $this->selectDB(RankDB);
-        foreach ($scores as $key => $score) {
-            //todo:
-            $this->_redisConn->zIncrBy($logID, $score, $key);
-        }
-
-
-        //todo:保存最后一次更新时间?
-//        $this->use(LatestUpdateDB);
-//        foreach ($rank->rank as $key => $score) {
-//            $lastTime = $this->_redisConn->hGet($nameID, $key);
-//            if ($lastTime == false || $lastTime < $time) {
-//                $this->_redisConn->hSet($nameID, $key, $time);
-//            }
-//        }
+        $this->_redisConn->sAdd($this->nameSetKey(), $rank->name);
         return status::OK;
     }
 
-    public function queryRankByNamePattern($namePattern = '*', $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
-    {
-        $nameIDs = $this->getNameIDList($namePattern, 100);
-        if ($nameIDs == null) return null;
-        $i = 0;
-        $rankArr = null;
-        foreach ($nameIDs as $name => $id) {
-            $rank = $this->queryRankByID($id, $start, $stop, $withScores, $withTime, $byScore);
-            $rankArr[$i++] = array('name' => $name, 'rank' => $rank);
-        }
-        return $rankArr;
-    }
 
-    public function queryRankByID($nameID, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
+    public function tryUpdateDenyList($name, $policy)
     {
-        $this->selectDB(UnionDB);
-        if ($byScore) {
-            $ranks = $this->_redisConn->zRevRangeByScore($nameID, $start, $stop, $withScores);
+        $updateTimer = $this->denyListUpdateTimer($name, $policy);
+        $doDenyListKey = $this->denyListKey($name, $policy);
+        $this->selectDB(rankDB);
+        //检查到没到需要更新的时间
+        if ($this->_redisConn->exists($updateTimer)) {
+            return;
         } else {
-            $ranks = $this->_redisConn->zRevRange($nameID, $start, $stop, $withScores);
+            $this->_redisConn->del($doDenyListKey);
+            $this->_redisConn->set($updateTimer, '1');
+//            $this->_redisConn->expire($updateTimer, sqrt($policy->time));
+            $this->_redisConn->expire($updateTimer, 1);
         }
-        if ($withTime == false) {
-            return $ranks;
-        } else {
-            return $this->associateRankTime($nameID, $ranks, $withScores);
+        self::$logger->debug('update deny list,name= ' . $name .
+            ' ,policy->time= ' . $policy->time .
+            ' ,policy->score= ' . $policy->score);
+        $scoreRankKey = $this->rankByScoreKey($name, $policy);
+        $deniedMember = $this->_redisConn->zRangeByScore($scoreRankKey, $policy->score, '+inf', array('withscores' => true));
+        //这里的time不能从现在开始算
+        $policyInfo = ':TTL:' . $policy->ttl . ':policy->time:' . $policy->time . ':policy->score:' . $policy->score;
+        self::$logger->debug('denied member and score: ', $deniedMember);
+        foreach ($deniedMember as $member => $score) {
+            if ($this->_redisConn->sIsMember($this->whiteListKey(), $member)) {
+                //在白名单里
+                self::$logger->info('member: ' . $member . ' in white list,but score=' . $score);
+            } else {
+                self::$logger->debug('member: '.$member.' not in white list');
+                //查找什么时候超过了分数阀值
+                $expireAt = $this->_redisConn->hGet($this->touchLimitTimestampKey($name, $policy), $member);
+                if ($expireAt == false) {
+                    self::$logger->error('member: ' . $member . ' score= ' . $score .
+                        ' touch score limit: ' . $policy->score .
+                        '. But touch timestamp not found in ' . $this->touchLimitTimestampKey($name, $policy));
+                    continue;
+                }
+                $expireAt = intval($expireAt) + $policy->ttl;
+                $denyInfo = $expireAt . $policyInfo . ':score:' . $score;
+                $this->_redisConn->hSet($doDenyListKey, $member, $denyInfo);
+            }
         }
     }
 
-    public function queryRankByName2($name, $start = 0, $stop = -1, $withScores = false, $withTime = false, $byScore = false)
+    //查询一个name,在指定policy下的前count名
+    public function queryRank($name, $policy, $count)
     {
-        $this->selectDB(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false) return null;//not exist
-        return $this->queryRankByID($nameID, $start, $stop, $withScores, $withTime, $byScore);
-    }
-
-
-    public function queryTimeIntervalRankByID($nameID, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
-    {
-
-
-        $this->selectDB(TimeDB);
-        //todo:按稍大的时间范围搜索可能已经存在的归并过的排序
-        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTimestamp, $stopTimestamp, array('withscores' => false));
-
-        if ($logIDs == false) return null;
-
-        $mergedKey = $nameID . ':' . reset($logIDs) . ':' . end($logIDs);
-        $this->selectDB(UnionDB);
-        //已经有归并的key
-        if (!$this->_redisConn->exists($mergedKey)) {
-            $this->selectDB(RankDB);
-            $this->_redisConn->zUnion($mergedKey, $logIDs);
-            $this->_redisConn->move($mergedKey, UnionDB);
-        }
-        $this->selectDB(UnionDB);
-        $this->_redisConn->expire($mergedKey, 900);//15分钟过期
-        $ranks = $this->_redisConn->zRevRange($mergedKey, 0, $count, $withScores);
-        if ($withTime == true) {
-            $this->associateRankTime($nameID, $ranks, $withScores);
+        $this->reRankIfNecessary($name, $policy);
+        $queryKey = $this->rankByScoreKey($name, $policy);
+        $ranks = $this->_redisConn->zRevRange($queryKey, 0, $count, true);
+        if ($ranks == false) {
+            self::$logger->warning('query rank failed.key: ' . $queryKey);
+            return null;
         }
         return $ranks;
     }
 
-    public function queryRankByTimeInterval2($namePattern, $startTimestamp, $stopTimestamp, $withScores = false, $withTime = false, $count = 10)
+    //查询一个名字在所有策略下的前count名,在没有查到任何数据的情况下,回收name相关的key及纪录
+    public function queryNameAllRank($name, $count)
     {
-        //到2100年
-        if ($startTimestamp < 1 || $stopTimestamp < 1 || $stopTimestamp > 4102419661) {
-            return array('msg' => 'time error');
-        }
-        if ($namePattern == null) return array('msg' => 'name  error');
-        $nameIDs = $this->getNameIDList($namePattern, 100);
-        if ($nameIDs == null) return null;
-
+        $allRank = array();
         $i = 0;
-        $rankArr = null;
-        foreach ($nameIDs as $name => $id) {
-            $rank = $this->queryTimeIntervalRankByID($id, $startTimestamp, $stopTimestamp, $withScores, $withTime, $count);
-            $rankArr[$i++] = array('name' => $name, 'rank' => $rank);
+        $nullCount = 0;
+        foreach ($this->policy as $p) {
+            $rk = $this->queryRank($name, $p, $count);
+            if ($rk != null) {
+                $allRank[$i++] = array('name' => $name . ':' . $p->time, 'rank' => $rk);
+            } else {
+                $nullCount++;
+            }
         }
-        return $rankArr;
+        if ($nullCount == count($this->policy)) {
+            //本name所有策略都返回null,则说明,这个name已经没有任何数据
+            //那么移除这个name,并检查相关的key是不是都一致
+            $this->_redisConn->sRem($this->nameSetKey(), $name);
+            foreach ($this->policy as $p) {
+                $len = $this->_redisConn->hLen($this->touchLimitTimestampKey($name, $p));
+                if ($len > 0) {
+                    self::$logger->error('query rank is null in all policy, ' .
+                        'but touch Limit hash len>0(' . $len . ')');
+                    $this->_redisConn->del($this->touchLimitTimestampKey($name, $p));
+                }
+            }
+        }
+        return $allRank;
     }
 
-    public
-    function doQuery($NamePattern, $StartTime, $EndTime, $IP, $IPMask, $count)
+    //查询所有排名的前count名
+    public function queryAllRank($count)
     {
-
+        $this->selectDB(rankDB);
+        $ranks = array();
+        $allName = $this->_redisConn->sMembers($this->nameSetKey());
+        $i = 0;
+        self::$logger->debug('all members: ', $allName);
+        foreach ($allName as $name) {
+            $rk = $this->queryNameAllRank($name, $count);
+            foreach ($rk as $r) {
+                $ranks[$i++] = $r;
+            }
+        }
+        return $ranks;
     }
 
-    public function deleteTimeIntervalByName($name, $startTime = 0, $stopTime = 0)
+    public function fetchDenyList($name)
     {
-        $nameID = $this->getNameID($name);
-        if ($nameID == null) return 0;
-
-        $this->selectDB(TimeDB);
-
-        $logIDs = $this->_redisConn->zRangeByScore($nameID, $startTime, $stopTime, array('withscores' => false));
-        if ($logIDs == false) return 0;
-
-        $this->selectDB(RankDB);
-        $this->_redisConn->zUnion(TMPZUnionKey, $logIDs);
-        $this->_redisConn->move(TMPZUnionKey, UnionDB);
-        $delCount = $this->_redisConn->del($logIDs);
-
-        $this->selectDB(UnionDB);
-        $this->_redisConn->zUnion($nameID, array($nameID, TMPZUnionKey), array(1, -1));
-        $this->_redisConn->zRemRangeByScore($nameID, '-inf', 0);
-        $this->_redisConn->del(TMPZUnionKey);
-
-        $this->selectDB(InfoDB);
-        $this->_redisConn->hDel(nameIDKey, $name);
-        return $delCount;
+        $this->selectDB(rankDB);
+        $allPolicyDenyList = array();
+        foreach ($this->policy as $p) {
+            $this->reRankIfNecessary($name, $p);
+            $denyListKey = $this->denyListKey($name, $p);
+            $this->tryUpdateDenyList($name, $p);
+            $denyList = $this->_redisConn->hGetAll($denyListKey);
+            $allPolicyDenyList = $denyList + $allPolicyDenyList;
+        }
+        return $allPolicyDenyList;
     }
 
-    public
-    function deleteByName($name)
+    public function fetchFormattedDenyList($name)
     {
-        $this->selectDB(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false) {
-            return 0;
+        $rawDenyList = $this->fetchDenyList($name);
+        $denyString = '';
+        foreach ($rawDenyList as $member => $denyTime) {
+            $denyTime = explode(':', $denyTime, 2);
+            $denyString = $denyString . 'D ' . $member . ' ' . $denyTime[0] . "\r\n";
+        }
+        if ($denyString == '') {
+            return 'D 256.256.256.256';
+        }
+        return $denyString;
+    }
+
+    public function addWhite($key)
+    {
+        $this->selectDB(rankDB);
+        if ($this->_redisConn->sAdd($this->whiteListKey(), $key) == 1) {
+            return 1;
         } else {
-            $this->_redisConn->hDel(nameIDKey, $name);
-        }
-
-        $this->selectDB(TimeDB);
-        $logIDs = $this->_redisConn->zRange($nameID, 0, -1);
-        $this->_redisConn->del($nameID);
-        $this->selectDB(RankDB);
-        $deleteCount = $this->_redisConn->del($logIDs);
-        $this->selectDB(UnionDB);
-        $this->_redisConn->del($nameID);
-//        $this->use(LatestUpdateDB);
-//        $this->_redisConn->del($nameID);
-        return $deleteCount;
-    }
-
-    public
-    function deleteRankByName($name)
-    {
-        $this->_redisConn->select(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        if ($nameID == false) {
             return 0;
-        } else {
-            $this->_redisConn->hDel(nameIDKey, $nameID);
         }
-
-        $this->_redisConn->select(TimeDB);
-        //
-        $log_IDs = $this->_redisConn->zRange($nameID, 0, -1);
-        $this->_redisConn->del($nameID);
-        $this->_redisConn->select(RankDB);
-        $deleted = $this->_redisConn->del($log_IDs);
-        $this->_redisConn->select(UnionDB);
-        $this->_redisConn->del($nameID);
-        $this->_redisConn->select(LatestUpdateDB);
-        $this->_redisConn->del($nameID);
-        //检查删除数量
-        if ($deleted == false) {
-            $deleted = 0;
-        }
-        return $deleted;
     }
 
-    public function getNameIDList($namePattern = '*', $count = 200)
+    public function removeWhiteList($key)
     {
-        $this->selectDB(InfoDB);
-        //todo:在session中保存游标(不同次请求redis链接可能已经断开,改游标还可用吗?)
-        $it = null;
-        $names = $this->_redisConn->hScan(nameIDKey, $it, $namePattern, $count);
-        if ($names == false) {
-            $names = null;
+        $this->selectDB(rankDB);
+        if ($this->_redisConn->sRem($this->whiteListKey(), $key) == 1) {
+            return 1;
+        } else {
+            return 0;
         }
+    }
+
+    public function fetchNameList()
+    {
+        $this->selectDB(rankDB);
+        $names = $this->_redisConn->sMembers($this->nameSetKey());
         return $names;
     }
 
-    public
-    function getNameList($namePattern = '*', $count = 200)
+    public function getWhiteList()
     {
-        return array_keys($this->getNameIDList($namePattern, $count));
+        $this->selectDB(rankDB);
+        $whiteMembers = $this->_redisConn->sMembers($this->whiteListKey());
+        return $whiteMembers;
     }
 
-    public
-    function queryTimeRangeByName($name)
+    public function getFormattedWhiteList()
     {
-        $this->_redisConn->select(InfoDB);
-        $nameID = $this->_redisConn->hGet(nameIDKey, $name);
-        $this->_redisConn->select(TimeDB);
-        $start = $this->_redisConn->zRange($nameID, 0, 0)[0];
-        $end = $this->_redisConn->zRange($nameID, -1, -1)[0];
-        return array('start' => $start, 'end' => $end);
+        $whiteList = $this->getWhiteList();
+        $whiteString = '';
+        foreach ($whiteList as $white) {
+            $whiteString = $whiteString . 'U ' . $white . "\r\n";
+        }
+        if ($whiteString == '') {
+            return 'U 256.256.256.256';
+        } else {
+            return $whiteString;
+        }
     }
+
+    public function deleteByName($name)
+    {
+//        return $deleteCount;
+    }
+
 }
